@@ -71,24 +71,61 @@ class SpatialCV:
     ) -> Iterator[Tuple[np.ndarray, np.ndarray, str]]:
         """
         Leave-One-Focus-Region-Out CV.
-        Train on 3 focus regions, validate on the 4th.
+        Train on N-1 focus regions, validate on the held-out one.
         This mimics the private leaderboard generalization test.
-        
+
         Yields:
             (train_indices, test_indices, region_name)
         """
+        # Graceful fallback: if region_col not found, try alternatives
         if region_col not in X.columns:
-            raise ValueError(f"Column '{region_col}' not found. Add a focus region indicator.")
+            # Try common alternatives
+            for alt_col in ["region", "focus_region", "state_fips"]:
+                if alt_col in X.columns:
+                    logger.info(f"leave_region_out: '{region_col}' not found, "
+                                f"using '{alt_col}' instead")
+                    region_col = alt_col
+                    break
+            else:
+                # Derive region from GEOID (first 2 digits = state FIPS)
+                if X.index.dtype == object or hasattr(X.index, 'str'):
+                    try:
+                        X = X.copy()
+                        X["_derived_region"] = X.index.str[:2]
+                        region_col = "_derived_region"
+                        logger.info("leave_region_out: Derived regions from GEOID "
+                                    "(first 2 digits = state FIPS)")
+                    except Exception:
+                        raise ValueError(
+                            f"Column '{region_col}' not found and cannot derive "
+                            f"from index. Available columns: {list(X.columns[:10])}"
+                        )
+                else:
+                    raise ValueError(
+                        f"Column '{region_col}' not found. Add a region indicator "
+                        f"column or use GEOID as index. Available: {list(X.columns[:10])}"
+                    )
 
         if regions is None:
-            regions = X[region_col].unique().tolist()
+            regions = X[region_col].dropna().unique().tolist()
 
         for holdout_region in regions:
-            train_mask = X[region_col] != holdout_region
-            test_mask = X[region_col] == holdout_region
+            # Use pandas comparison that handles NaN correctly
+            # NaN != holdout_region is False, NaN == holdout_region is False
+            # So we need explicit NaN handling
+            region_vals = X[region_col]
+            train_mask = region_vals.notna() & (region_vals != holdout_region)
+            test_mask = region_vals.notna() & (region_vals == holdout_region)
 
             train_idx = np.where(train_mask)[0]
             test_idx = np.where(test_mask)[0]
+
+            n_dropped = region_vals.isna().sum()
+            if n_dropped > 0:
+                logger.warning(
+                    f"Leave-{holdout_region}-out: {n_dropped} rows with NaN "
+                    f"region dropped from both train and test"
+                )
 
             logger.info(
                 f"Leave-{holdout_region}-out: train={len(train_idx)}, test={len(test_idx)}"
@@ -171,9 +208,19 @@ def compute_cv_scores(
 ) -> Tuple[np.ndarray, float, float]:
     """
     Compute cross-validation RMSE scores using the specified strategy.
-    
+
+    Args:
+        model: Either a sklearn-compatible model instance OR a callable factory
+               that returns a fresh unfitted model. If callable, a new model
+               is created for each fold to avoid data leakage.
+        X: Feature matrix
+        y: Target variable
+        cv_strategy: Strategy name
+        n_splits: Number of folds
+        **cv_kwargs: Additional kwargs for CV strategy
+
     Returns:
-        (fold_scores, mean_rmse, std_rmse)
+        (oof_predictions, mean_rmse, std_rmse)
     """
     spatial_cv = SpatialCV()
 
@@ -193,6 +240,9 @@ def compute_cv_scores(
     fold_scores = []
     oof_predictions = np.full(len(y), np.nan)
 
+    # Determine if model is a factory (callable) or instance
+    is_factory = callable(model) and not hasattr(model, 'fit')
+
     for fold in folds:
         if len(fold) == 3:
             train_idx, test_idx, region_name = fold
@@ -202,8 +252,14 @@ def compute_cv_scores(
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+        # Create fresh model for each fold to prevent leakage
+        if is_factory:
+            fold_model = model()  # call factory to get fresh unfitted model
+        else:
+            fold_model = model   # use instance directly (legacy behavior)
+
+        fold_model.fit(X_train, y_train)
+        y_pred = fold_model.predict(X_test)
 
         rmse = np.sqrt(mean_squared_error(y_test, y_pred))
         fold_scores.append(rmse)

@@ -28,7 +28,7 @@ from xgboost import XGBRegressor
 SEED = 42
 np.random.seed(SEED)
 
-PROJ = Path("/home/z/my-project/bias-bounty-map")
+PROJ = Path(__file__).resolve().parent.parent
 OUT = PROJ / "data/output"
 
 FEATURE_PATH = OUT / "engineered_features_v3.parquet"

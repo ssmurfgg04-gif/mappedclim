@@ -18,13 +18,15 @@ import json
 import numpy as np
 import pandas as pd
 import h3
+from pathlib import Path
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import GroupKFold
 from xgboost import XGBRegressor
 
 # ── Paths ──────────────────────────────────────────────────────────────────
-FEATURE_PATH = "/home/z/my-project/bias-bounty-map/data/output/engineered_features_v3.parquet"
-OUTPUT_COMPARISON = "/home/z/my-project/bias-bounty-map/data/output/proxy_target_comparison.json"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+FEATURE_PATH = PROJECT_ROOT / "data/output/engineered_features_v3.parquet"
+OUTPUT_COMPARISON = PROJECT_ROOT / "data/output/proxy_target_comparison.json"
 
 # ── Load data ──────────────────────────────────────────────────────────────
 print("=" * 70)
@@ -70,7 +72,7 @@ if has_svi_overall:
 else:
     # Load strata table and merge
     print("    Loading SVI from strata table...")
-    strata_path = "/home/z/my-project/bias-bounty-map/kaggle_dataset/national-strata-tract-table.parquet"
+    strata_path = PROJECT_ROOT / "kaggle_dataset/national-strata-tract-table.parquet"
     strata = pd.read_parquet(strata_path)
     svi_merge = strata[["GEOID", "svi_overall"]].set_index("GEOID")
     svi_overall = feat["GEOID"].map(svi_merge["svi_overall"])

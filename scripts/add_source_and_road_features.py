@@ -13,14 +13,15 @@ import os
 import time
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 sys.stdout.reconfigure(line_buffering=True)
 
 # ── paths ────────────────────────────────────────────────────────────────
-PROJECT = "/home/z/my-project/bias-bounty-map"
-STRATA_PATH = os.path.join(PROJECT, "kaggle_dataset", "national-strata-tract-table.parquet")
-NATIONAL_FEAT_PATH = os.path.join(PROJECT, "data", "features", "national_tract_features.parquet")
-REGIONAL_FEAT_PATH = os.path.join(PROJECT, "data", "output", "engineered_features_v3.parquet")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+STRATA_PATH = PROJECT_ROOT / "kaggle_dataset" / "national-strata-tract-table.parquet"
+NATIONAL_FEAT_PATH = PROJECT_ROOT / "data" / "features" / "national_tract_features.parquet"
+REGIONAL_FEAT_PATH = PROJECT_ROOT / "data" / "output" / "engineered_features_v3.parquet"
 
 
 # ═══════════════════════════════════════════════════════════════════════

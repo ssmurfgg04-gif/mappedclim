@@ -270,12 +270,19 @@ class TargetReverseEngineer:
                     best_rmse = rmse
                     best_weights = weights
         else:
-            # Use Ridge regression as proxy
+            # Use Ridge regression as proxy, then normalize to convex combination
             from sklearn.linear_model import RidgeCV
             ridge = RidgeCV(alphas=np.logspace(-3, 3, 20))
             ridge.fit(X, y_true)
-            best_weights = ridge.coef_
-            pred = ridge.predict(X)
+            raw_weights = ridge.coef_.copy()
+            # Normalize: shift to make all non-negative, then normalize to sum=1
+            # This produces a convex combination (same semantics as <=3 case)
+            raw_weights = raw_weights - raw_weights.min()  # shift to non-negative
+            if raw_weights.sum() > 0:
+                best_weights = raw_weights / raw_weights.sum()
+            else:
+                best_weights = np.ones(n_features) / n_features  # fallback to equal
+            pred = X @ best_weights
             best_rmse = np.sqrt(mean_squared_error(y_true, pred))
 
         logger.info("Best linear formula weights:")
@@ -296,9 +303,23 @@ class TargetReverseEngineer:
         """
         results = []
 
-        building_ratio = sub_metrics.get("building_count_ratio", sub_metrics.iloc[:, 0])
-        road_ratio = sub_metrics.get("road_length_ratio", sub_metrics.iloc[:, 1] if sub_metrics.shape[1] > 1 else building_ratio)
-        poi_ratio = sub_metrics.get("poi_to_facility_ratio", sub_metrics.iloc[:, 2] if sub_metrics.shape[1] > 2 else building_ratio)
+        building_ratio = sub_metrics.get("building_count_ratio")
+        road_ratio = sub_metrics.get("road_length_ratio")
+        poi_ratio = sub_metrics.get("poi_to_facility_ratio")
+
+        # If expected columns are missing, raise an error instead of silently
+        # using positional columns (which can produce meaningless results)
+        if building_ratio is None:
+            raise ValueError(
+                "Column 'building_count_ratio' not found in sub_metrics. "
+                f"Available columns: {list(sub_metrics.columns)}"
+            )
+        if road_ratio is None:
+            logger.warning("Column 'road_length_ratio' not found, using building_count_ratio as fallback")
+            road_ratio = building_ratio
+        if poi_ratio is None:
+            logger.warning("Column 'poi_to_facility_ratio' not found, using building_count_ratio as fallback")
+            poi_ratio = building_ratio
 
         # Candidate 1: Simple gap = 1 - ratio
         pred1 = 1 - building_ratio

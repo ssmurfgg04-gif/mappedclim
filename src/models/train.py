@@ -132,44 +132,69 @@ class ModelTrainer:
         y: pd.Series,
         tune: bool = False,
         cv_strategy: str = "group_kfold",
+        target_cols: Optional[List[str]] = None,
     ) -> Dict[str, Tuple[Any, float]]:
         """
         Train all base models with spatial CV evaluation.
         Returns dict of {model_name: (model, cv_rmse)}.
+
+        Args:
+            X: Feature matrix (should NOT contain target/leakage columns)
+            y: Target variable
+            tune: Whether to use Optuna tuning for final model
+            cv_strategy: CV strategy name
+            target_cols: List of target/leakage column names to drop from X
+                         (safety check - warns if found in X columns)
         """
         results = {}
 
+        # ── Leakage guard ────────────────────────────────────────────────
+        if target_cols:
+            leak_found = [c for c in target_cols if c in X.columns]
+            if leak_found:
+                logger.warning(
+                    f"LEAKAGE RISK: {len(leak_found)} target-derived columns "
+                    f"found in X: {leak_found[:5]}... Dropping them."
+                )
+                X = X.drop(columns=leak_found)
+
         # Spatial CV setup
         cv = SpatialCV()
+
+        # Model factory functions (returns UNFITTED model with same params)
+        # This ensures CV and final model use identical hyperparameters.
+        model_factories = {
+            "xgboost": lambda: xgb.XGBRegressor(**self.config["models"]["xgboost"]),
+            "lightgbm": lambda: lgb.LGBMRegressor(**self.config["models"]["lightgbm"]),
+            "catboost": lambda: cb.CatBoostRegressor(**self.config["models"]["catboost"]),
+        }
 
         for model_name in ["xgboost", "lightgbm", "catboost"]:
             logger.info(f"\n{'='*60}")
             logger.info(f"Training {model_name}")
             logger.info(f"{'='*60}")
 
-            # Create a fresh unfitted model for CV (avoid data leakage)
-            if model_name == "xgboost":
-                params = self.config["models"]["xgboost"]
-                model = xgb.XGBRegressor(**params)
-            elif model_name == "lightgbm":
-                params = self.config["models"]["lightgbm"]
-                model = lgb.LGBMRegressor(**params)
-            elif model_name == "catboost":
-                params = self.config["models"]["catboost"]
-                model = cb.CatBoostRegressor(**params)
+            # Use factory to create fresh unfitted model for CV
+            # This avoids the leakage bug where a pre-fitted model
+            # was passed to compute_cv_scores
+            model_factory = model_factories[model_name]
 
             oof_preds, mean_rmse, std_rmse = compute_cv_scores(
-                model, X, y,
+                model_factory, X, y,
                 cv_strategy=cv_strategy,
             )
 
-            # Now train on full data for final model
-            if model_name == "xgboost":
-                final_model = self.train_xgboost(X, y, tune=tune)
-            elif model_name == "lightgbm":
-                final_model = self.train_lightgbm(X, y, tune=tune)
-            elif model_name == "catboost":
-                final_model = self.train_catboost(X, y, tune=tune)
+            # Train final model on full data using SAME params (no tune)
+            # If tune=True, we log a warning about CV/final mismatch
+            if tune:
+                logger.warning(
+                    f"{model_name}: tune=True may cause CV/final param mismatch. "
+                    f"CV used config params, final may use Optuna-tuned params."
+                )
+
+            final_model = model_factory()
+            final_model.fit(X, y)
+            self.models[model_name] = final_model
 
             results[model_name] = {
                 "model": final_model,

@@ -18,7 +18,7 @@ t0 = time.time()
 SEED = 42
 np.random.seed(SEED)
 
-PROJ = Path("/home/z/my-project/bias-bounty-map")
+PROJ = Path(__file__).resolve().parent.parent
 STRATA_PATH = PROJ / "kaggle_dataset/national-strata-tract-table.parquet"
 REGIONAL_PATH = PROJ / "data/output/engineered_features_v3.parquet"
 OUT_PATH = PROJ / "data/features/national_tract_features.parquet"
