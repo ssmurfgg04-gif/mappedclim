@@ -142,24 +142,37 @@ class ModelTrainer:
         # Spatial CV setup
         cv = SpatialCV()
 
-        for model_name, train_fn in [
-            ("xgboost", self.train_xgboost),
-            ("lightgbm", self.train_lightgbm),
-            ("catboost", self.train_catboost),
-        ]:
+        for model_name in ["xgboost", "lightgbm", "catboost"]:
             logger.info(f"\n{'='*60}")
             logger.info(f"Training {model_name}")
             logger.info(f"{'='*60}")
 
-            # Get OOF predictions via spatial CV
+            # Create a fresh unfitted model for CV (avoid data leakage)
+            if model_name == "xgboost":
+                params = self.config["models"]["xgboost"]
+                model = xgb.XGBRegressor(**params)
+            elif model_name == "lightgbm":
+                params = self.config["models"]["lightgbm"]
+                model = lgb.LGBMRegressor(**params)
+            elif model_name == "catboost":
+                params = self.config["models"]["catboost"]
+                model = cb.CatBoostRegressor(**params)
+
             oof_preds, mean_rmse, std_rmse = compute_cv_scores(
-                train_fn(X, y, tune=tune),
-                X, y,
+                model, X, y,
                 cv_strategy=cv_strategy,
             )
 
+            # Now train on full data for final model
+            if model_name == "xgboost":
+                final_model = self.train_xgboost(X, y, tune=tune)
+            elif model_name == "lightgbm":
+                final_model = self.train_lightgbm(X, y, tune=tune)
+            elif model_name == "catboost":
+                final_model = self.train_catboost(X, y, tune=tune)
+
             results[model_name] = {
-                "model": self.models[model_name],
+                "model": final_model,
                 "cv_rmse_mean": mean_rmse,
                 "cv_rmse_std": std_rmse,
                 "oof_predictions": oof_preds,

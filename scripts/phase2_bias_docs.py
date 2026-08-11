@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore')
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger(__name__)
 
-ROOT = Path("/home/z/my-project/bias-bounty-map")
+ROOT = Path(__file__).resolve().parent.parent  # project root from scripts/
 OUT = ROOT / "data/output"
 
 def load():

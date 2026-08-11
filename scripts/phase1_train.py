@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger(__name__)
 
-ROOT = Path("/home/z/my-project/bias-bounty-map")
+ROOT = Path(__file__).resolve().parent.parent  # project root from scripts/
 OUT = ROOT / "data/output"
 OUT.mkdir(parents=True, exist_ok=True)
 SEED = 42
@@ -321,7 +321,7 @@ def main():
     sub = pd.DataFrame({'GEOID':geo_padded,'coverage_gap_score':pred_clipped})
     sub.to_csv(OUT/"submission.csv",index=False)
     sub.to_csv(ROOT/"submission.csv",index=False)
-    sub.to_csv(Path("/home/z/my-project/download")/"submission.csv",index=False)
+    sub.to_csv((ROOT.parent / "download") / "submission.csv",index=False)  # sibling of project root
     log.info(f"  Submission: {len(sub)} tracts mean={pred_clipped.mean():.6f} std={pred_clipped.std():.6f}")
     
     # Predictions parquet

@@ -174,9 +174,11 @@ class StackingEnsemble:
 class TargetReverseEngineer:
     """
     Attempt to reverse-engineer the organizer's coverage gap formula.
-    
-    The target is a deterministic function of the input data.
-    If we can figure out the exact formula, we don't need ML.
+
+    WARNING: PySR symbolic regression requires Julia runtime which is slow to start.
+    This class is DEPRECATED in favor of the standalone proxy target approach.
+    Use with caution - for best results, precompile Julia first:
+        python -c "from pysr import PySRRegressor; PySRRegressor().fit(X, y)"
     """
 
     def __init__(self, seed: int = 42):
@@ -200,10 +202,20 @@ class TargetReverseEngineer:
         Returns:
             Best formula and its RMSE
         """
+        import warnings
+        warnings.warn(
+            "TargetReverseEngineer is DEPRECATED. Use the standalone proxy target approach instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         try:
             from pysr import PySRRegressor
         except ImportError:
-            logger.warning("PySR not installed. Install with: pip install pysr")
+            logger.warning(
+                "PySR not installed (requires Julia runtime). "
+                "Install with: pip install pysr && python -c 'import pysr; pysr.install()'"
+            )
             logger.info("Falling back to linear formula search")
             return self._linear_search(sub_metrics, y_true)
 
@@ -338,11 +350,11 @@ def generate_submission(
     """
     submission = pd.DataFrame({
         "GEOID": test_geoids,
-        "coverage_gap": predictions,
+        "coverage_gap_score": predictions,
     })
 
     # Clip predictions to reasonable range
-    submission["coverage_gap"] = submission["coverage_gap"].clip(-1, 1)
+    submission["coverage_gap_score"] = submission["coverage_gap_score"].clip(-1, 1)
 
     submission.to_csv(output_path, index=False)
     logger.info(f"Submission saved to {output_path}: {len(submission)} rows")

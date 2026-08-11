@@ -11,9 +11,9 @@ from sklearn.ensemble import ExtraTreesRegressor
 import h3
 sys.stdout.reconfigure(line_buffering=True)
 SEED = 42; np.random.seed(SEED)
-PROJ = Path("/home/z/my-project/bias-bounty-map")
+PROJ = Path(__file__).resolve().parent.parent  # project root from scripts/
 OUT = PROJ / "data/output"; OUT.mkdir(parents=True, exist_ok=True)
-DL = Path("/home/z/my-project/download"); DL.mkdir(parents=True, exist_ok=True)
+DL = PROJ.parent / "download"; DL.mkdir(parents=True, exist_ok=True)  # sibling of project root
 NF = 3
 
 print("v3 FINAL: 5-model ensemble + H3-CV + 70/30 blend")

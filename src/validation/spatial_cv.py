@@ -183,6 +183,8 @@ def compute_cv_scores(
         folds = spatial_cv.spatial_block_cv(X, y, n_splits=n_splits, **cv_kwargs)
     elif cv_strategy == "stratified_spatial":
         folds = spatial_cv.stratified_spatial_cv(X, y, n_splits=n_splits, **cv_kwargs)
+    elif cv_strategy == "leave_region_out":
+        folds = spatial_cv.leave_region_out(X, y, **cv_kwargs)
     else:
         raise ValueError(f"Unknown CV strategy: {cv_strategy}")
 
@@ -191,7 +193,12 @@ def compute_cv_scores(
     fold_scores = []
     oof_predictions = np.full(len(y), np.nan)
 
-    for train_idx, test_idx in folds:
+    for fold in folds:
+        if len(fold) == 3:
+            train_idx, test_idx, region_name = fold
+            logger.info(f"  Region: {region_name}")
+        else:
+            train_idx, test_idx = fold
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 

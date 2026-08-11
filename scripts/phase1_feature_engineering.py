@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 SEED = 42; np.random.seed(SEED)
 
-PROJ = Path("/home/z/my-project/bias-bounty-map")
+PROJ = Path(__file__).resolve().parent.parent  # project root from scripts/
 OUT = PROJ / "data/output"; OUT.mkdir(parents=True, exist_ok=True)
 
 t0 = time.time()

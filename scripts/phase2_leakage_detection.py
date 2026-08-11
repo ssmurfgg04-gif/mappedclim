@@ -10,7 +10,7 @@ warnings.filterwarnings('ignore')
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 SEED = 42; np.random.seed(SEED)
-PROJ = Path("/home/z/my-project/bias-bounty-map")
+PROJ = Path(__file__).resolve().parent.parent  # project root from scripts/
 OUT = PROJ / "data/output"
 t0 = time.time()
 
