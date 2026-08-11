@@ -45,7 +45,7 @@ def push_dataset_to_kaggle(
     
     meta = {
         "title": "Bias Bounty Mapping Equity - Features",
-        "id": f"ssmurfgg04-gif/{dataset_name}",
+        "id": f"jackblessed/{dataset_name}",
         "licenses": [{"name": "CC0-1.0"}],
         "description": "Pre-computed enhanced features for Bias Bounty Mapping Equity Challenge",
     }
@@ -94,7 +94,7 @@ def push_notebook_to_kaggle(
         "is_private": True,
         "enable_gpu": True,
         "enable_internet": True,
-        "dataset_sources": ["ssmurfgg04-gif/bias-bounty-features"],
+        "dataset_sources": ["jackblessed/bias-bounty-features"],
         "competition_sources": [],
         "keywords": ["bias", "mapping", "equity", "coverage-gap"],
     }
