@@ -12,16 +12,23 @@ Dates: Aug 28 - Nov 1, 2026 | Metric: RMSE | Max Team: 4
 # Install dependencies
 pip install -r requirements.txt
 
-# Download data from Source Cooperative S3
+# Download data from Source Cooperative
 python scripts/run_pipeline.py --phase data
 
-# Feature engineering
-python scripts/run_pipeline.py --phase features
+# Enhanced feature engineering (300+ features per tract)
+python scripts/enhanced_feature_pipeline.py
 
-# Run EDA notebook
-jupyter notebook notebooks/01_eda_baseline.ipynb
+# Self-evolving model pipeline (auto-tuning, bias-aware)
+python scripts/self_evolving_pipeline.py
 
-# Full pipeline
+# Bias discovery analysis ($1,000 prize)
+python scripts/comprehensive_bias_discovery.py
+
+# Kaggle GPU training (push dataset + notebook)
+python scripts/kaggle_integration.py push-dataset
+python scripts/kaggle_integration.py push-notebook
+
+# Full pipeline (legacy)
 python scripts/run_pipeline.py --phase all
 ```
 

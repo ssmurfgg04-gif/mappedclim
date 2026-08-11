@@ -34,3 +34,6 @@ pipeline.log
 *.pkl
 *.joblib
 *.bin
+.tmp/
+data/
+*.tmp

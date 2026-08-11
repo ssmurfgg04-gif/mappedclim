@@ -1,101 +1,127 @@
-# Methodology: Bias Bounty Mapping Equity Challenge
+# Bias Bounty Mapping Equity Challenge — Methodology
 
-## 1. Problem Understanding
+## Approach Overview
 
-Our task is to predict coverage gap scores for U.S. Census tracts, where the coverage
-gap measures the completeness of Overture Maps data relative to authoritative reference
-datasets (Census TIGER/Line Roads, Microsoft Building Footprints, HIFLD critical
-facilities). The evaluation metric is Root Mean Squared Error (RMSE).
+Our approach combines spatial feature engineering, gradient-boosted tree ensembles, and systematic bias discovery to predict coverage gap scores for US Census tracts. The methodology is designed around three key principles:
 
-**Key insight**: The coverage gap is a deterministic function of the input data — it
-is computed by the organizers, not subjectively assigned. This means reverse-engineering
-the exact formula is the highest-leverage activity.
+1. **Feature richness over model complexity**: 300+ engineered features per tract capture the full information content of the Overture Maps + reference data
+2. **Spatial integrity**: All evaluation uses GroupKFold by county to prevent spatial autocorrelation leakage
+3. **Bias-aware optimization**: We jointly optimize prediction RMSE and equity across demographic strata
 
-## 2. Data Sources
+## Feature Engineering (300+ features per tract)
 
-| Source | Role | Key Variables |
-|--------|------|---------------|
-| Overture Maps (buildings, roads, POIs) | Coverage target | geometry, sources[], confidence |
-| Census TIGER/Line Roads | Road reference | geometry, road class |
-| Microsoft Building Footprints | Building reference | geometry |
-| HIFLD (hospitals, fire stations, EMS, schools) | Facility reference | geometry, facility type |
-| Census ACS Housing | Housing reference | housing_units |
-| National Strata Table (232 cols) | Feature backbone | SVI, CVI, rural/urban, hazard indices |
+### Coverage Gap Features
+- Building count ratio (Overture / Microsoft) and gap (1 - ratio)
+- Road length ratio (Overture / TIGER) and gap
+- Road segment count ratio
+- POI count vs HIFLD facility count
+- Building count vs ACS housing units
+- Log transforms and squared terms for nonlinear relationships
 
-## 3. Feature Engineering
+### Source Composition Features (unique differentiator)
+- Per-tract ML-derived fraction (% of buildings from Microsoft ML, not human-verified)
+- OSM fraction, Google fraction, Esri fraction
+- Source diversity (count of distinct sources)
+- POI mean confidence and low-confidence fraction
 
-### 3.1 Coverage Gap Features (Primary)
-- `building_count_ratio` = overture_building_count / microsoft_building_count
-- `building_area_ratio` = overture_building_area / microsoft_building_area
-- `road_length_ratio` = overture_road_length / tiger_road_length
-- `road_count_ratio` = overture_road_segment_count / tiger_road_segment_count
-- `poi_to_facility_ratio` = overture_poi_count / hifld_facility_count
-- `buildings_per_housing_unit` = overture_building_count / acs_housing_units
+### Strata Table Features (from national 85,396-tract table)
+- SVI (Social Vulnerability Index) overall and sub-indices
+- CVI (Climate Vulnerability Index)
+- RUCA rural/urban classification and population density
+- Tribal tract indicators
+- Wildfire risk (USFS, NIFC, MTBS)
+- Drought risk (USDM)
+- All `*_covered` flags encoded as: 1=covered, 0=not covered, -1=null (data doesn't reach)
+- Data coverage depth and fraction
 
-### 3.2 Source Composition Features (Competitive Advantage)
-Parsed from the nested `sources[]` column in Overture data:
-- `ml_derived_fraction`: % of features from ML models (no human verification)
-- `osm_fraction`: % of features from OpenStreetMap
-- `source_diversity`: number of unique source datasets
-- `mean_osm_staleness_days`: average days since last OSM update
-- `mean_poi_confidence`: average Overture confidence score for POIs
-- `low_confidence_fraction`: % of POIs with confidence < 0.5
+### Spatial Lag Features
+- K-nearest neighbor (k=5,10,20) mean aggregates
+- Spatial difference from neighbors (local outlier detection)
+- County-level mean and standard deviation
+- Tract deviation from county mean
 
-### 3.3 Null Flag Features (Signal, Not Missing)
-- `is_conus`: whether tract is in CONUS
-- `has_wildfire_data`, `has_heat_data`, `has_drought_data`: data availability indicators
-- `data_coverage_depth`: number of data layers that reach this tract
+### Interaction Features
+- SVI × rural/urban
+- SVI × building gap, SVI × road gap
+- Tribal × hazard exposure
+- Tribal × building gap
+- Compound risk score (building gap + road gap + low data coverage)
+- Coverage gap × ML-derived fraction
+- Log and squared transforms
 
-### 3.4 Spatial Lag Features
-- `spatial_lag_k10_mean_*`: mean value among 10 nearest neighboring tracts
-- `county_mean_*`: county-level aggregate
-- `county_dev_*`: tract deviation from county mean
-- `dist_to_tribal_boundary`: distance to nearest tribal land
-- `tribal_overlap_fraction`: fraction of tract overlapping tribal lands
+## Model Architecture
 
-### 3.5 Vulnerability Interaction Features
-- `svi_x_rural`: SVI x rural indicator
-- `svi_x_wildfire_risk`: SVI x wildfire risk
-- `compound_risk_score`: heat + wildfire + drought risk
-- `is_tribal_x_high_svi`: tribal x high-SVI intersection
+### Base Models
+1. **XGBoost**: 500 estimators, max_depth=6, learning_rate=0.05, with spatial GroupKFold
+2. **LightGBM**: 500 estimators, max_depth=6, num_leaves=31, with spatial GroupKFold
+3. **CatBoost**: For categorical feature handling (when target available)
 
-## 4. Validation Strategy
+### Ensemble
+- Optimized weighted average (scipy SLSQP) minimizing RMSE on OOF predictions
+- Stacking ensemble with Ridge meta-learner (backup)
 
-### 4.1 Spatial Cross-Validation
-Standard random K-fold gives optimistic estimates due to spatial autocorrelation.
-We use GroupKFold by County to prevent data leakage.
+### Spatial Cross-Validation
+- GroupKFold by county FIPS (5 folds)
+- Prevents spatial autocorrelation leakage
+- Ensures model generalizes to unseen counties
 
-### 4.2 Public/Private Split Awareness
-- Public LB: ~30% of test data
-- Private LB: ~70% of test data (determines final ranking)
-- We select 2 submissions based on strong local CV, NOT public LB position
+## Self-Evolving Pipeline
 
-## 5. Model Architecture
+The pipeline iteratively improves through:
+1. Train all models with current best hyperparameters
+2. Evaluate with spatial CV + bias penalty (RMSE + 0.3 × bias_score)
+3. Auto-tune with random search (20 trials per iteration)
+4. Analyze residuals for systematic strata patterns
+5. Generate new interaction features if residuals correlate with strata
+6. Repeat until convergence (RMSE improvement < 0.001)
 
-### 5.1 Base Models
-| Model | Strength |
-|-------|----------|
-| XGBoost | Industry standard, robust |
-| LightGBM | Fast, excellent with large feature sets |
-| CatBoost | Superior categorical handling |
+## Current Results (Self-Supervised, Proxy Targets)
 
-### 5.2 Ensembling
-- Weighted Averaging with optimized blend weights
-- Stacking with Ridge meta-learner
+| Model | Target | CV RMSE | CV R² |
+|-------|--------|---------|-------|
+| XGBoost | Building Gap | 0.139 | 0.69 |
+| LightGBM | Building Gap | 0.140 | 0.69 |
+| Blended | Building Gap | 0.139 | 0.69 |
+| XGBoost | Road Gap | 0.195 | 0.94 |
 
-## 6. Bias Discovery (for $1,000 prize)
+## Bias Discovery ($1,000 Prize)
 
-Analyzed model residuals by individual strata and their intersections.
-Key intersectional gaps not captured by the automated API:
-- Rural x high-SVI x tribal tracts
-- Tribal x high-wildfire tracts
-- Border x high-SVI (colonias)
+### Individual Strata Disparities
+| Dimension | Building Gap Disparity | Road Gap Disparity |
+|-----------|----------------------|-------------------|
+| Rural/Urban | 0.14 | 1.28 |
+| Tribal | 0.09 | 0.77 |
+| Wildfire Risk | 0.07 | 0.89 |
+| Drought Risk | 0.10 | 0.37 |
 
-## 7. Reproducibility
+### Key Intersectional Gaps
+The Bias Scoring API evaluates individual strata, but misses compounding effects:
+- **Rural + High-SVI**: Systematically larger road AND building gaps
+- **Tribal + High Wildfire**: Double vulnerability — harder to map AND more likely to need emergency mapping
+- **Border + Colonias**: Microsoft detects structures but Overture conflation excludes them
 
-- Random seed: 42
-- One-command execution: `python scripts/run_pipeline.py --phase all`
+### Real-World Impact
+1. **Emergency dispatch**: Missing roads in tribal wildfire corridors delay 911 response
+2. **FEMA assessment**: Colonias in South-Central TX invisible to damage assessment
+3. **ML verification gap**: 88% of buildings in Eastern OK are ML-derived (never human-verified)
+4. **Compound deprivation**: Rural high-SVI tracts face ALL forms of mapping deprivation simultaneously
 
----
+## Target Reverse-Engineering Strategy
 
-Generated: 2026-08-11 04:28:20
+When the competition releases the target variable (Aug 28), we will:
+1. Test linear formula candidates (weighted averages of sub-metrics)
+2. Test nonlinear candidates (geometric mean, harmonic mean, max gap)
+3. Use symbolic regression (PySR) if simple formulas don't match
+4. If exact formula found, skip ML entirely for that component
+
+## GPU Training (Kaggle)
+
+For Optuna tuning with 100+ trials, we use Kaggle T4x2 GPUs:
+- XGBoost with `tree_method='gpu_hist'` and `device='cuda'`
+- LightGBM with `device='gpu'`
+- CatBoost with `task_type='GPU'`
+- 50 Optuna trials per model, 3-fold spatial CV each
+
+## Reproducibility
+
+All code, configs, and random seeds (42) are version-controlled. The pipeline is fully resumable — state is saved after each iteration. Feature engineering is deterministic (no random sampling).
