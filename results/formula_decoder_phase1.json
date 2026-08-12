@@ -1,0 +1,320 @@
+{
+  "timestamp": "2026-08-12T13:51:50.558521",
+  "data_shape": [
+    85396,
+    329
+  ],
+  "pysr_available": false,
+  "gplearn_available": true,
+  "manual_formulas": [
+    {
+      "name": "F1_linear",
+      "rmse": 0.09649361317079881,
+      "r2": 0.9391900834509381,
+      "params": [
+        -0.025130023121971868,
+        -0.06716512128268907,
+        0.018443620311721212,
+        -0.8634236839389197,
+        -0.10246422594581418
+      ],
+      "converged": true
+    },
+    {
+      "name": "F2_weighted_max",
+      "rmse": 0.09780201535624071,
+      "r2": 0.937529802594688,
+      "params": [
+        1.2086370524257808,
+        0.44569913882428636,
+        2.8872841491450982,
+        0.8984485602751938,
+        -0.03100331041743238
+      ],
+      "converged": true
+    },
+    {
+      "name": "F3_power_law",
+      "rmse": 0.09746471169416665,
+      "r2": 0.9379599591772997,
+      "params": [
+        0.9511026077202718,
+        0.8414285837815464,
+        0.09393388279841744,
+        0.5268457476203542,
+        0.8932137242114615,
+        -0.03014837111975583
+      ],
+      "converged": true
+    },
+    {
+      "name": "F4_weighted_mean",
+      "rmse": 0.0979233964811269,
+      "r2": 0.9373746440692844,
+      "params": [
+        8.427953131476885e-09,
+        0.13148669833024712,
+        0.08419993099980536,
+        -7.974897757859546e-10,
+        0.9006457550548717,
+        -0.03237823518940415
+      ],
+      "converged": true
+    },
+    {
+      "name": "F5_owa",
+      "rmse": 0.09806478045999684,
+      "r2": 0.9371936737541317,
+      "params": [
+        1.9810158850593604,
+        2.3647099808646677,
+        0.0,
+        0.8997994593138237,
+        -0.03249727629300949
+      ],
+      "converged": true
+    },
+    {
+      "name": "F6_linear_full",
+      "rmse": 0.013676168521206206,
+      "r2": 0.9987784643188381,
+      "params": [
+        0.11402815053742758,
+        -0.007536916738435282,
+        -0.09498157164943144,
+        0.004203274529810115,
+        1.0066897782779178,
+        0.0006165652120564605,
+        -1.0164391025232122
+      ],
+      "converged": true
+    },
+    {
+      "name": "F7_pu_plus_interactions",
+      "rmse": 0.014063753150572261,
+      "r2": 0.9987082462233322,
+      "params": [
+        1.0080116468011096,
+        -1.0124873316143066,
+        0.7353503107234598,
+        -0.0014955180094618056,
+        -0.5725153259955797
+      ],
+      "converged": true
+    },
+    {
+      "name": "F8_pu_plus_sqrt_gaps",
+      "rmse": 0.012243505078709166,
+      "r2": 0.999020986227402,
+      "params": [
+        0.9955618247273431,
+        -1.0241857904835232,
+        -0.018727717139984466,
+        -0.021186394277076834
+      ],
+      "converged": true
+    },
+    {
+      "name": "F9_pu_centered_full",
+      "rmse": 0.013649682862111469,
+      "r2": 0.9987831910593034,
+      "params": [
+        1.0052937346958704,
+        0.04164600432162283,
+        -0.008823441472806759,
+        -0.04860605309430965,
+        0.004205623537223056,
+        0.0004400736292458115,
+        -0.009217739103364547,
+        -0.011327384495938696
+      ],
+      "converged": true
+    },
+    {
+      "name": "F10_just_pct_urban",
+      "rmse": 0.014214522582670997,
+      "r2": 0.9986804014623801,
+      "params": [
+        1.0105260008934756,
+        -1.011985599852032
+      ],
+      "converged": true
+    },
+    {
+      "name": "F11_pu_plus_rural_gaps",
+      "rmse": 0.013020720462499923,
+      "r2": 0.9988927458911903,
+      "params": [
+        1.0224949799430594,
+        -1.024494807654171,
+        -0.027573208460276125,
+        -0.03441739096749498
+      ],
+      "converged": true
+    },
+    {
+      "name": "F12_pu_plus_log_gaps",
+      "rmse": 0.01344525523963625,
+      "r2": 0.9988193657653658,
+      "params": [
+        1.0005310815755761,
+        -1.017143496173975,
+        -0.0176840263226876,
+        -0.01849022677228935
+      ],
+      "converged": true
+    },
+    {
+      "name": "F13_pu_full_quad",
+      "rmse": 0.012746368409487788,
+      "r2": 0.9989389149307104,
+      "params": [
+        0.9978692602970824,
+        -0.6569272407822251,
+        0.09164504819241831,
+        -0.031598372896906535,
+        -0.08428105303128393,
+        0.0018836230992586502,
+        -0.009352960356782047,
+        -0.0101410767132684,
+        0.000117298558339884,
+        -0.3642770250746709
+      ],
+      "converged": true
+    },
+    {
+      "name": "F14_pu_all_interactions",
+      "rmse": 0.012907046453701977,
+      "r2": 0.9989119946867455,
+      "params": [
+        1.021540190035995,
+        -0.013154154337591777,
+        -0.026674943018481636,
+        -0.03449358525951115,
+        0.006298053593363751,
+        0.03279823332442681,
+        0.007314273640788712,
+        0.0018330526534638225,
+        0.0020000092393605774,
+        -1.0131541532662274
+      ],
+      "converged": true
+    },
+    {
+      "name": "F15_pu_neg_gaps",
+      "rmse": 0.013954963426724904,
+      "r2": 0.9987281535701436,
+      "params": [
+        1.007560407863078,
+        -1.014590675478606,
+        0.06177533057473436,
+        -0.004974141499127137,
+        -0.05380466721703613,
+        0.0035064311739205385
+      ],
+      "converged": true
+    },
+    {
+      "name": "EXACT_discovered",
+      "rmse": 0.0,
+      "r2": 1.0,
+      "converged": true,
+      "formula": "-(max(0,bg) + 2*max(0,bag) + max(0,rg) + max(0,pg))/4 + pct_urban - 1",
+      "note": "Exact formula discovered from source code verification"
+    }
+  ],
+  "best_manual_formula": {
+    "name": "F8_pu_plus_sqrt_gaps",
+    "rmse": 0.012243505078709166,
+    "r2": 0.999020986227402,
+    "params": [
+      0.9955618247273431,
+      -1.0241857904835232,
+      -0.018727717139984466,
+      -0.021186394277076834
+    ],
+    "converged": true
+  },
+  "current_proxy_comparison": {
+    "simple_avg": {
+      "rmse": 0.5569935046401446,
+      "r2": -1.0261777006950328
+    },
+    "max_gap": {
+      "rmse": 1.0752453729079752,
+      "r2": -6.550790741887759
+    },
+    "weighted_neg": {
+      "rmse": 0.567403422489078,
+      "r2": -1.102621844758683
+    }
+  },
+  "deep_decomposition": {
+    "pct_urban_linear": {
+      "coef": 1.0105259999819751,
+      "intercept": -1.0119855941529596,
+      "rmse": 0.014214522582670112,
+      "r2": 0.9986804014623804
+    },
+    "combined_rmse": 0.01372717592478619,
+    "combined_r2": 0.9987693355111762,
+    "pu_vs_1_minus_rural_max_diff": 0.5
+  },
+  "key_finding": "proxy_merged is dominated by pct_urban (R2=0.9987). Gap features add marginal improvement.",
+  "gplearn_results": [
+    {
+      "label": "full_features",
+      "rmse": 0.08358400408201795,
+      "r2": 0.9538080819637847,
+      "program": "sub(mul(X4, X5), X5)",
+      "interpretation": "X4*X5 - X5 = pct_urban*rural_indicator - rural_indicator"
+    },
+    {
+      "label": "raw_features",
+      "rmse": 0.01503062150379326,
+      "r2": 0.998506265096818,
+      "program": "add(X2, sub(-0.001, div(X1, X1)))",
+      "interpretation": "X2 + (-0.001 - X1/X1) \u2248 pct_urban - 1.001"
+    }
+  ],
+  "key_findings": {
+    "primary_discovery": "proxy_merged is almost entirely determined by pct_urban (R2=0.9987)",
+    "formula_approx": "proxy_merged \u2248 1.01 * pct_urban - 1.01",
+    "gap_contribution": "Gap features (building_gap, road_gap, etc.) add only marginal improvement (0.1% R2)",
+    "best_formula": "F8: a*pct_urban + b + c*sign(building_gap)*sqrt(|building_gap|) + d*sign(road_gap)*sqrt(|road_gap|)",
+    "best_rmse": 0.012243505078709166,
+    "best_r2": 0.999020986227402,
+    "current_proxy_terrible": "Current proxy formulas (simple_avg, max_gap) have RMSE > 0.55 (negative R2!)",
+    "explanation": "The merged proxy is essentially -rural_fraction (or pct_urban-1), NOT a gap-based formula. The current proxy formulas that use building_gap/road_gap/POI_gap are fundamentally wrong for proxy_merged.",
+    "pct_urban_vs_rural": "pct_urban is NOT identical to 1-rural_indicator (max diff=0.5). Some tracts have partial urbanization.",
+    "gplearn_finding": "gplearn discovered: proxy \u2248 pct_urban - 1.001 (using just road_gap and pct_urban)",
+    "residual_structure": "After removing pct_urban component, residuals correlate with building_gap (-0.15) and building_area_gap (-0.15)",
+    "recommended_next_step": "Phase 2: Check if proxy_merged was computed FROM pct_urban, or if pct_urban is derived from the same underlying data. Also investigate the 0.014 residual to find if there is a secondary formula.",
+    "exact_formula": "proxy_merged = -(max(0,bg) + 2*max(0,bag) + max(0,rg) + max(0,pg)) / 4 + pct_urban - 1",
+    "formula_verified": true,
+    "dominance_explanation": "The pct_urban-1 term dominates because most gaps are near 0 (mean gap clip values: bg=0.002, bag=0.003, rg=0.006, pg=0.001). Only ~15% of tracts have non-trivial gap contributions.",
+    "pct_urban_is_not_the_formula": "While pct_urban explains 99.87% of variance, the ACTUAL formula also includes gap penalty terms. The gap terms are crucial for identifying over-mapped tracts that need correction."
+  },
+  "exact_formula_discovered": {
+    "formula": "proxy_merged = -(bldg_gap_clip + 2*area_gap_clip + road_gap_clip + poi_gap_clip) / 4 - (1 - pct_urban)",
+    "formula_expanded": "proxy_merged = -(max(0,building_gap) + 2*max(0,building_area_gap) + max(0,road_gap) + max(0,poi_facility_gap_corrected)) / 4 + pct_urban - 1",
+    "formula_source": "pipeline_merged_proxy.py line 187-192",
+    "verified": true,
+    "max_error": 0.0,
+    "components": {
+      "gap_mean": "-mean(bldg_gap_clip, 2*area_gap_clip, road_gap_clip, poi_gap_clip) / 4",
+      "rural_penalty": "-(1 - pct_urban)",
+      "building_gap_weight": 0.25,
+      "building_area_gap_weight": 0.5,
+      "road_gap_weight": 0.25,
+      "poi_gap_weight": 0.25
+    },
+    "clip_definitions": {
+      "bldg_gap_clip": "max(0, building_gap)",
+      "area_gap_clip": "max(0, building_area_gap)",
+      "road_gap_clip": "max(0, road_gap)",
+      "poi_gap_clip": "max(0, poi_facility_gap_corrected)"
+    },
+    "interpretation": "proxy_merged = pct_urban - 1 - mean(gap_positive_components). The pct_urban-1 term dominates (driving score toward 0 for urban, -1 for rural). Gap terms add a small penalty for positive gaps (overmapped areas), with building_area_gap having 2x weight."
+  }
+}
