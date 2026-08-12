@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-08-12 09:36:10",
+  "pipeline": "weather_enhanced_submission",
+  "n_tracts": 85396,
+  "n_features": 67,
+  "ensemble_method": "convex",
+  "ensemble_weights": {
+    "xgb": 0.3039,
+    "lgb": 0.2977,
+    "cb": 0.0,
+    "et": 0.3983,
+    "lgb_dart": 0.0
+  },
+  "model_train_rmse": {
+    "xgb": 0.002054777770440219,
+    "lgb": 0.002072894693328163,
+    "cb": 0.004329154400806517,
+    "et": 0.0016520736757587022,
+    "lgb_dart": 0.08185720645824923
+  },
+  "submission_stats": {
+    "mean": -0.465499003964713,
+    "std": 0.7781195614235388,
+    "min": -2.4348963102885226,
+    "max": 0.00027154443946228343,
+    "median": -2.90521999948238e-05
+  },
+  "clipping": {
+    "lower": -3.0,
+    "upper": 0.5,
+    "n_clipped_below": 0,
+    "n_clipped_above": 0
+  },
+  "rural_penalty_coefficient": 1.0,
+  "selected_wx_features": [
+    "wx_flood_risk_x_rural",
+    "wx_fire_risk_x_road_gap",
+    "wx_compound_hazard_x_coverage_gap"
+  ],
+  "selected_wf_features": [],
+  "elapsed_sec": 45.7
+}
