@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-08-12 07:07:12",
+  "total_numeric_features": 285,
+  "strata_origin_in_engineered": 208,
+  "strata_in_top60": 40,
+  "strata_in_top80": 53,
+  "strong_unused_strata": 43,
+  "very_strong_unused": 16,
+  "top20_candidates": [
+    "carbonplan_buildings",
+    "carbonplan_rps_2047_mean",
+    "fod_acres_ignited",
+    "ghcn_temp_nearest_km",
+    "mtbs_wildfire_burned_pct_land",
+    "usfs_BuildingDensity_mean",
+    "tribal_legal",
+    "cvi_climate_extreme_events",
+    "cvi_baseline_health",
+    "ghcn_any_within_25km",
+    "usgs_wildland_fire_burned_pct_area",
+    "mtbs_years_since_wildfire",
+    "tribal_legal_pct",
+    "svi_minority",
+    "cvi_climate",
+    "fod_last_fire_year",
+    "pop_total",
+    "tribal_any",
+    "usfs_WHP_mean",
+    "usgs_prescribed_burned_pct_area"
+  ],
+  "category_counts": {
+    "climate_carbon": 11,
+    "fire": 18,
+    "weather": 2,
+    "tribal": 4,
+    "svi": 2,
+    "population": 1,
+    "rural_urban": 1,
+    "heat": 4
+  },
+  "rough_signal_gain_pct": 5.1
+}

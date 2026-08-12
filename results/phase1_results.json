@@ -1,0 +1,30 @@
+{
+  "phase": 1,
+  "timestamp": "2026-08-12 07:29:33",
+  "correction": "DETERMINISTIC_FIX: train on gap_only (alpha=0), apply rural penalty at inference",
+  "training_target_formula": "gap_only = -mean(max(0,bg), 2*max(0,bag), max(0,rg), max(0,pfg))",
+  "inference_formula": "final_score = model.predict(X) - 1.0 * rural_penalty",
+  "proxy_merged_formula": "proxy_merged = gap_only - 1.0*rural (REFERENCE ONLY, not training target)",
+  "n_tracts": 85396,
+  "n_features": 349,
+  "gap_only_stats": {
+    "mean": -0.0038890473608434936,
+    "std": 0.014786614713011282,
+    "min": -0.5775862068965517,
+    "max": -0.0
+  },
+  "rural_penalty_stats": {
+    "mean": 0.23080497758132984,
+    "std": 0.3869721223855673
+  },
+  "proxy_merged_stats": {
+    "mean": -0.23469402494217334,
+    "std": 0.3913036580366281,
+    "min": -1.5775862068965516,
+    "max": -0.0
+  },
+  "circularity": {
+    "svi_to_bldg_r2": 0.0029306738219926354,
+    "rural_to_bldg_r2": 0.007684022656570533
+  }
+}

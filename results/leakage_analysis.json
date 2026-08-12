@@ -1,0 +1,11 @@
+{
+  "county_cv_r2": 0.9803129767409405,
+  "county_cv_rmse": 0.0356979250459507,
+  "h3_cv_r2": 0.9850248734984481,
+  "h3_cv_rmse": 0.031134234776825958,
+  "r2_drop": -0.004711896757507605,
+  "leakage_confirmed": false,
+  "n_h3_blocks": 463,
+  "n_features": 79,
+  "n_tracts": 9491
+}

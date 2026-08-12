@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-08-12 07:34:43",
+  "status": "LOCKED",
+  "bug_fixes": {
+    "fix_1_is_perfectly_mapped": {
+      "applied": true,
+      "n_tracts": 72260
+    },
+    "fix_2_building_gap_clipped": {
+      "applied": true,
+      "range": [
+        -4.0,
+        0.49425287356321834
+      ]
+    }
+  },
+  "deterministic_fix": {
+    "train_on_gap_only": true,
+    "rural_penalty_at_inference": true
+  },
+  "interaction_features": {
+    "n_features": 17,
+    "features": [
+      "ws_dist_x_bldg",
+      "ws_dist_x_rural",
+      "cvi_ext_x_bldg",
+      "cvi_ext_x_rural",
+      "carbon_x_bldg",
+      "carbon_x_rural",
+      "carb_bldg_x_rural",
+      "svi_min_x_bldg",
+      "svi_min_x_rural",
+      "burn_pct_x_bldg",
+      "burn_pct_x_rural",
+      "fire_acres_x_bldg",
+      "fire_acres_x_rural",
+      "tribal_legal_x_bldg",
+      "tribal_x_fire",
+      "tribal_x_burn",
+      "cvi_health_x_rural"
+    ]
+  },
+  "pipelines": {
+    "lean": {
+      "features": 67,
+      "r2": 0.9759678799392877,
+      "rmse": 0.0022922648734048645,
+      "risk": "LOW",
+      "use": "Primary submission"
+    },
+    "expanded": {
+      "features": 68,
+      "r2": 0.9672495966926244,
+      "rmse": 0.0026759443849236155,
+      "risk": "MEDIUM",
+      "use": "Secondary submission (hedge)"
+    }
+  },
+  "validation": {
+    "Lean": {
+      "n_tracts": 85396,
+      "has_geoid": true,
+      "has_score": true,
+      "score_min": -1.2529317814667529,
+      "score_max": 0.0006090489521223,
+      "score_mean": -0.23448519230304526,
+      "score_std": 0.39116843611334284,
+      "score_nan": 0,
+      "score_inf": 0,
+      "pct_negative": 0.9707129139538152,
+      "pct_zero": 0.0,
+      "pct_positive": 0.029287086046184834,
+      "geoid_unique": 85396,
+      "geoid_len_ok": 69734
+    },
+    "Expanded": {
+      "n_tracts": 85396,
+      "has_geoid": true,
+      "has_score": true,
+      "score_min": -1.2579792642683052,
+      "score_max": 0.0004741950640631,
+      "score_mean": -0.2345746025866461,
+      "score_std": 0.3914600386182741,
+      "score_nan": 0,
+      "score_inf": 0,
+      "pct_negative": 0.6393273689634175,
+      "pct_zero": 0.0,
+      "pct_positive": 0.36067263103658254,
+      "geoid_unique": 85396,
+      "geoid_len_ok": 69734
+    }
+  },
+  "comparison": {
+    "pearson_corr": 0.9999903925203293,
+    "rmse_between": 0.0017422158931689115,
+    "mean_diff": -8.941028360080403e-05,
+    "n_agreement_99pct": 84860,
+    "n_agreement_95pct": 85394
+  },
+  "next_steps": [
+    "Wait for Aug 28 real labels",
+    "Submit both lean and expanded to public LB",
+    "If expanded beats lean \u2192 interactions are real signal",
+    "If lean wins \u2192 interactions are proxy-specific, stay lean",
+    "Retrain winner on full data for final submission"
+  ]
+}

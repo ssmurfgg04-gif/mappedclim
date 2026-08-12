@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-08-12 07:32:40",
+  "pipeline": "integrated_10x_DETERMINISTIC_FIX",
+  "correction": "Train on gap_only (alpha=0), apply rural penalty at inference",
+  "training_target": "gap_only",
+  "inference_formula": "final_score = model.predict(X) - 1.0 * rural_penalty",
+  "n_tracts": 85396,
+  "n_features": 68,
+  "cv_type": "H3_spatial_block_3fold",
+  "n_h3_blocks": 467,
+  "best_ensemble": "convex",
+  "best_rmse": 0.0026759443849236155,
+  "best_r2": 0.9672495966926244,
+  "convex_weights": {
+    "xgb": 0.0,
+    "lgb": 0.0,
+    "et": 0.3525,
+    "cat": 0.6475,
+    "lgb_dart": 0.0
+  },
+  "models": {
+    "xgb": {
+      "rmse": 0.005568963829441528,
+      "r2": 0.9074793410288101
+    },
+    "lgb": {
+      "rmse": 0.005724614908723734,
+      "r2": 0.917773593117064
+    },
+    "et": {
+      "rmse": 0.005055128660768367,
+      "r2": 0.9441488234072494
+    },
+    "cat": {
+      "rmse": 0.005493572820052853,
+      "r2": 0.9453945757013659
+    },
+    "lgb_dart": {
+      "rmse": 0.007300734427007945,
+      "r2": 0.8830209373913572
+    }
+  },
+  "feature_importance": {
+    "shadow_group_pct": 1.434407668134425,
+    "stale_group_pct": 3.98916425826759,
+    "uncertainty_group_pct": 5.848420076561882,
+    "all_10x_pct": 11.271992002963898
+  },
+  "bias_ratios": {
+    "tribal": 2.535325310228152,
+    "rural_urban": 28.115091361047064
+  },
+  "elapsed_sec": 90.4
+}

@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-08-12 07:05:08",
+  "total_strata_columns": 232,
+  "already_in_engineered": 208,
+  "not_in_engineered": 24,
+  "numeric_with_valid_corr": 0,
+  "candidates_after_filter": 0,
+  "top_20_features": [],
+  "category_counts": {
+    "fire": 0,
+    "climate_carbon": 0,
+    "weather": 0,
+    "heat": 0,
+    "rural_urban": 0,
+    "geology": 0,
+    "svi_health": 0,
+    "tribal": 0,
+    "population": 0,
+    "other": 0
+  },
+  "strong_features_abs_corr_gt_01": 0,
+  "strong_features_abs_corr_gt_02": 0
+}

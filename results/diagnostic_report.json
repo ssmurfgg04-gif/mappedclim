@@ -1,0 +1,243 @@
+{
+  "submission_checksum": "a5e409d950a6deb951edcbf9e0693663",
+  "deterministic_fix": {
+    "pipeline": "merged_proxy_honest_DETERMINISTIC_FIX",
+    "target": "gap_only",
+    "inference_formula": "final_score = model.predict(X) - 1.0 * rural_penalty",
+    "corr_submission_proxy_merged": 0.999982723502338,
+    "corr_submission_gap_only": 0.29236127895827413,
+    "target_is_gap_only": true,
+    "inference_has_rural_penalty": true
+  },
+  "gap_only_consistency": {
+    "max_diff": 0.0,
+    "mean_diff": 0.0,
+    "allclose": true
+  },
+  "rural_penalty": {
+    "max_rural_diff": 0.0,
+    "max_proxy_diff": 0.0,
+    "rural_penalty_applied_once": "True"
+  },
+  "oof_analysis": {
+    "completeness": true,
+    "r2_vs_gap_only": {
+      "xgb": 0.9723769304522528,
+      "lgb": 0.9674969620643272,
+      "et": 0.9797733826589043
+    }
+  },
+  "feature_issues": [
+    "usgs_wildfire_burned_pct_area: 5.9% outside [0,1] range",
+    "usdm_summer_pct_d0plus: 99.5% outside [0,1] range",
+    "usdm_summer_pct_d2plus: 66.3% outside [0,1] range",
+    "usdm_winter_pct_d0plus: 99.5% outside [0,1] range",
+    "usdm_winter_pct_d2plus: 70.3% outside [0,1] range",
+    "usgs_wildland_fire_burned_pct_area: 6.8% outside [0,1] range",
+    "usgs_wildfire_pct_area_2plus: 2.1% outside [0,1] range",
+    "usgs_prescribed_burned_pct_area: 2.2% outside [0,1] range",
+    "mtbs_wildfire_burned_pct_land: 4.0% outside [0,1] range",
+    "mtbs_prescribed_burned_pct_land: 1.1% outside [0,1] range",
+    "nifc_wildfire_burned_pct_land: 3.4% outside [0,1] range",
+    "pmdi_pct_months_severe: 68.4% outside [0,1] range",
+    "spi03_pct_months_d2: 42.9% outside [0,1] range",
+    "spi12_pct_months_d2: 21.9% outside [0,1] range",
+    "bldg_gap_abs: 89.5% positive gap values (expected mostly \u22640)",
+    "area_gap_abs: 91.7% positive gap values (expected mostly \u22640)",
+    "bldg_x_area_gap: 51.7% positive gap values (expected mostly \u22640)",
+    "bldg_minus_area_gap: 73.7% positive gap values (expected mostly \u22640)",
+    "road_gap_abs: 99.6% positive gap values (expected mostly \u22640)",
+    "pct_urban_x_bldg: 69.8% outside [0,1] range",
+    "source_coverage_fraction_x_bldg: 82.4% outside [0,1] range"
+  ],
+  "edge_cases": {
+    "zero_building_gap": 142,
+    "zero_road_gap": 3,
+    "zero_gap_only": 72260,
+    "tribal_zero_poi": 1198,
+    "all_major_gaps_nan": 0,
+    "sample_100_geoids": [
+      "26055550603",
+      "13265010200",
+      "06073003101",
+      "36081092500",
+      "39061025002",
+      "24031703202",
+      "47179061800",
+      "15003001901",
+      "11001002802",
+      "48451001401"
+    ]
+  },
+  "strata_correlations": {
+    "total_numeric_cols": 205,
+    "strong_features_gt_0.1": 68,
+    "strong_features_gt_0.15": 40,
+    "top_30": [
+      [
+        "pct_urban",
+        0.27801191711730844
+      ],
+      [
+        "pop_urban",
+        0.20282543708605147
+      ],
+      [
+        "tract_vintage",
+        NaN
+      ],
+      [
+        "svi_year",
+        NaN
+      ],
+      [
+        "cvi_baseline_environment",
+        0.1972220286552394
+      ],
+      [
+        "svi_minority",
+        0.10124380896621626
+      ],
+      [
+        "cvi_source_vintage",
+        NaN
+      ],
+      [
+        "ruca_secondary",
+        -0.14928110271746364
+      ],
+      [
+        "ruca_year",
+        NaN
+      ],
+      [
+        "rucc_covered",
+        NaN
+      ],
+      [
+        "rucc_2023",
+        -0.26447652453761866
+      ],
+      [
+        "rucc_metro",
+        0.23267351151526944
+      ],
+      [
+        "ruca_primary",
+        -0.1491954768600211
+      ],
+      [
+        "rucc_year",
+        NaN
+      ],
+      [
+        "nchs_2013",
+        -0.20901015443107687
+      ],
+      [
+        "pop_rural",
+        -0.19068221009904568
+      ],
+      [
+        "ALAND",
+        -0.1661893106028148
+      ],
+      [
+        "cvi_baseline_infrastructure",
+        -0.1431940889303032
+      ],
+      [
+        "cvi_climate_extreme_events",
+        -0.12437012760004594
+      ],
+      [
+        "cvi_climate",
+        -0.1214952365469439
+      ],
+      [
+        "cvi_baseline_health",
+        -0.11608519423845597
+      ],
+      [
+        "pop_total",
+        0.09649938572578658
+      ],
+      [
+        "nchs_year",
+        NaN
+      ],
+      [
+        "tribal_legal",
+        -0.1150355569145284
+      ],
+      [
+        "tribal_legal_pct",
+        -0.1043073986936973
+      ],
+      [
+        "cvi_overall",
+        -0.09401278309440776
+      ],
+      [
+        "tribal_any",
+        -0.09110745847340501
+      ],
+      [
+        "svi_pop",
+        0.09052579409162137
+      ],
+      [
+        "cvi_climate_socioeconomic",
+        -0.08956532206408095
+      ],
+      [
+        "tribal_pct",
+        -0.07224592794656863
+      ]
+    ],
+    "categories": {
+      "climate/carbon": 13,
+      "heat/nasa": 1,
+      "fire": 24,
+      "drought": 0,
+      "weather": 8,
+      "svi/vulnerability": 1,
+      "rural/urban": 7,
+      "tribal": 2,
+      "geology": 4
+    }
+  },
+  "h3_leakage": {
+    "unique_cells": 467,
+    "tracts_per_cell_mean": 182.8608137044968
+  },
+  "unused_national_features": 291,
+  "missing_important_features": [
+    "ms_bldg_knn10_mean",
+    "ms_bldg_knn10_diff",
+    "ms_bldg_knn20_mean",
+    "ms_bldg_knn20_diff",
+    "ms_bldg_county_mean",
+    "ms_bldg_county_std",
+    "ms_bldg_county_dev",
+    "overture_source_count",
+    "tiger_road_knn10_mean",
+    "tiger_road_knn10_diff",
+    "tiger_road_knn20_mean",
+    "tiger_road_knn20_diff",
+    "tiger_road_county_mean",
+    "tiger_road_county_std",
+    "tiger_road_county_dev",
+    "tiger_road_present",
+    "source_coverage_count",
+    "source_coverage_true_count",
+    "overture_source_count",
+    "osm_source_count"
+  ],
+  "bugs_found": [],
+  "warnings_found": [
+    "WARNING: 21 feature sanity issues found",
+    "INFO: 68 unused strata columns with |r|>0.1"
+  ],
+  "elapsed_sec": 2.2
+}
