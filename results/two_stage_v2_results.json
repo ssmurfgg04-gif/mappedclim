@@ -1,0 +1,86 @@
+{
+  "timestamp": "2026-08-13 07:48:15",
+  "pipeline": "two_stage_v2_enhanced",
+  "data": {
+    "n_total": 85396,
+    "n_zero_gap": 72260,
+    "n_nonzero_gap": 13136,
+    "pct_zero_gap": 84.61754648929693
+  },
+  "classifier": {
+    "best_model": "standard_xgb",
+    "standard_xgb": {
+      "cv_auc": 0.9999999968397525,
+      "cv_auc_std": 4.4692647817763726e-09,
+      "cv_ap": 0.9999999826208037,
+      "brier": 3.409374184664202e-05
+    },
+    "focal_xgb": {
+      "cv_auc": 0.9999969580663031,
+      "cv_auc_std": 7.878856414777863e-07,
+      "cv_ap": 0.9999776098346439,
+      "brier": 0.009903902061807182,
+      "focal_gamma": 2.0,
+      "focal_alpha": 0.75
+    },
+    "isotonic_calibration": {
+      "brier_before": 3.409374184664202e-05,
+      "brier_after": 1.5892346914877243e-05,
+      "improvement_pct": 53.38632237446087
+    },
+    "optimal_threshold": 0.1,
+    "optimal_f1": 0.9999238791200427,
+    "scale_pos_weight": 5.500913520097442,
+    "n_features": 71
+  },
+  "regressor": {
+    "type": "4_model_ensemble",
+    "weights": {
+      "xgb": 0.3403,
+      "lgb": 0.292,
+      "et": 0.3677,
+      "dart": 0.0
+    },
+    "oof_rmse": 0.004213874589952573,
+    "oof_r2": 0.9798336231807399,
+    "n_training": 13136,
+    "n_features": 49,
+    "model_rmses": {
+      "xgb": 0.004094539893220425,
+      "lgb": 0.004782901173499281,
+      "et": 0.0035029903904360816,
+      "dart": 0.00983233893962078
+    }
+  },
+  "baseline": {
+    "type": "4_model_ensemble",
+    "weights": {
+      "xgb": 0.356,
+      "lgb": 0.2826,
+      "et": 0.3614,
+      "dart": 0.0
+    },
+    "oof_rmse": 0.001785411365970303,
+    "oof_r2": 0.9854206192943028
+  },
+  "comparison": {
+    "single_rmse": 0.0017854113659703033,
+    "single_r2": 0.9999791812878557,
+    "two_stage_rmse": 0.001654899944044193,
+    "two_stage_r2": 0.9999821136900412,
+    "nonzero_mae_single": 0.0006291495928557356,
+    "nonzero_mae_two_stage": 0.0006313697090587754,
+    "nonzero_improvement_pct": -0.35287572752968793,
+    "zero_mae_single": 2.19373437081783e-05,
+    "zero_mae_two_stage": 4.748377395118125e-07,
+    "zero_improvement_pct": 97.83548206278596
+  },
+  "submission": {
+    "mean": -0.234693792219486,
+    "std": 0.3912825235547802,
+    "min": -1.4071031120701196,
+    "max": 0.0,
+    "median": 0.0
+  },
+  "elapsed_sec": 99.2
+}
