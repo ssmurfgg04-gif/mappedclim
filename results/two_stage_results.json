@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-08-13 07:10:53",
+  "pipeline": "two_stage_classify_regress",
+  "data": {
+    "n_total": 85396,
+    "n_zero_gap": 72260,
+    "n_nonzero_gap": 13136,
+    "pct_zero_gap": 84.61754648929693
+  },
+  "classifier": {
+    "type": "XGBoost",
+    "cv_auc": 0.9999999905192577,
+    "cv_auc_std": 1.34077942929927e-08,
+    "cv_ap": 0.9999999478505028,
+    "optimal_threshold": 0.5099999999999998,
+    "optimal_f1": 0.9999238791200427,
+    "scale_pos_weight": 5.500913520097442,
+    "n_features": 71
+  },
+  "regressor": {
+    "type": "3_model_ensemble",
+    "weights": {
+      "xgb": 0.3333,
+      "lgb": 0.3333,
+      "et": 0.3333
+    },
+    "oof_rmse": 0.004257287115346426,
+    "oof_r2": 0.9794159633696854,
+    "n_training": 13136,
+    "n_features": 49
+  },
+  "baseline": {
+    "type": "3_model_ensemble",
+    "weights": {
+      "xgb": 0.3333,
+      "lgb": 0.3333,
+      "et": 0.3333
+    },
+    "oof_rmse": 0.0018060590095412851,
+    "oof_r2": 0.9850814587923
+  },
+  "comparison": {
+    "single_rmse": 0.0018060590095412851,
+    "single_r2": 0.9999786969816287,
+    "two_stage_rmse": 0.001674522615308045,
+    "two_stage_r2": 0.9999816870080471,
+    "nonzero_mae_single": 0.0006461388792621382,
+    "nonzero_mae_two_stage": 0.0006444107478969274,
+    "nonzero_improvement_pct": 0.2674550968337106,
+    "zero_mae_single": 2.0350197382196196e-05,
+    "zero_mae_two_stage": 5.425516344345968e-07,
+    "zero_improvement_pct": 97.33392446154228
+  },
+  "submission": {
+    "mean": -0.2346935941947964,
+    "std": 0.3912827395945975,
+    "min": -1.3952290886726495,
+    "max": -1.3402921601581162e-07,
+    "median": -7.064838253183672e-07
+  },
+  "elapsed_sec": 82.7
+}
