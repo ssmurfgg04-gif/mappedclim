@@ -163,3 +163,51 @@ Stage Summary:
 - 90% prediction intervals achieve 89.3% coverage (well-calibrated)
 - Tribal bias ratio 1.209 (21% higher error) — persistent equity concern
 - Production artifacts serialized and tested
+
+---
+Task ID: 7
+Agent: Main
+Task: Architecture Audit P0-P4 (single-stage baseline, geo ablation, simplified model, tribal fix, hardening)
+
+Work Log:
+- Built quick_architecture_audit.py for P0+P1+P2
+- Built p3_p4_tribal_hardening.py for P3+P4
+
+## P0: Single-Stage Baseline
+- Direct regression on FULL target (including 84.6% zeros) with XGB/LGB
+- **Single-stage XGB: Random R2=0.9998, Spatial R2=0.9998**
+- **VERDICT: Two-stage architecture CAN BE DEPRECATED** — single-stage matches perfectly
+- The classifier + regressor pipeline is over-engineered for this problem
+
+## P1: Geographic Feature Ablation
+- Removed 13 geographic features (lat, lon, rucc, metro, rural_indicator, etc.)
+- No-geo model: Random R2=0.9998, Spatial R2=0.9997 (nearly identical)
+- **VERDICT: Features are intrinsically spatially autocorrelated, NOT leaking geography**
+- Previous spatial overfitting finding was on non-zero subset only; full-target model is robust
+
+## P2: Simplified Models — CRITICAL FINDING
+- 3-feature model (road+area+poi gaps): **R2=0.23** — INSUFFICIENT!
+- 4-feature model (+pct_urban): **R2=0.9998** — PERFECT!
+- 5-feature model (+tribal): **R2=0.9999** — marginal improvement
+- **pct_urban is the CRITICAL 4th feature** — it separates zero-gap from non-zero-gap tracts
+- This explains why the classifier was "trivially easy" — pct_urban does the same job
+
+## P3: Tribal Bias Fix
+- Baseline tribal bias ratio: **2.04x** (on full target, worse than non-zero-only estimate of 1.21x)
+- Reweighting sweep: w=3x gives ratio=1.87, w=8x gives ratio=1.80
+- Tribal interaction features alone: ratio=2.15 (slightly worse)
+- **Best: 3x reweighting → ratio=1.87** (8% improvement from 2.04)
+- Overall R2 stays at 0.9998 regardless of reweighting (fairness doesn't hurt accuracy)
+
+## P4: Production Hardening
+- Disagreement-based rejection: **corr(disagreement, |error|) = 0.593** (strong signal!)
+- Top 5% disagreement: flagged MAE is 772% worse than unflagged — excellent rejection rule
+- Drift detection baselines computed for top features
+- Model card generated with full documentation
+
+Stage Summary:
+- **DEPRECATE two-stage architecture** — single-stage R2=0.9998
+- **Ship 4-feature model**: road_gap_clip + area_gap_clip + poi_gap_clip + pct_urban
+- **3 features alone are INSUFFICIENT** (R2=0.23) — pct_urban is critical for zero-separation
+- **Tribal bias is 2x** (not 1.2x as estimated on non-zero subset) — 3x reweighting helps
+- **Disagreement rejection works** — 0.593 correlation with error, top 5% are 772% worse

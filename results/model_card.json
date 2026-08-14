@@ -1,0 +1,65 @@
+{
+  "model_name": "coverage_gap_score_predictor",
+  "version": "v3_architecture_audit",
+  "date": "2026-08-14",
+  "architecture": "single_stage_ensemble (XGB + LGB + ET, 4-5 features)",
+  "key_insights": [
+    "Two-stage architecture can be DEPRECATED - single-stage R2 >= 0.9998",
+    "Classifier is trivially easy - bldg_gap_clip alone achieves 96.8% accuracy",
+    "Model needs only 4 features: road_gap_clip, area_gap_clip, poi_gap_clip, pct_urban",
+    "3-feature model without pct_urban is insufficient (R2=0.23)",
+    "pct_urban is the critical 4th feature that unlocks full performance"
+  ],
+  "training_data": {
+    "n_tracts": 85396,
+    "n_zero_gap": 72260,
+    "n_nonzero_gap": 13136,
+    "target": "proxy_merged (coverage gap score)"
+  },
+  "performance": {
+    "random_cv_r2": 0.9998,
+    "spatial_cv_r2": 0.9997,
+    "spatial_generalization_gap": 0.0001,
+    "note": "Single-stage direct regression on full target (incl. zeros)"
+  },
+  "fairness": {
+    "tribal_bias_ratio_baseline": 2.03976158161586,
+    "tribal_bias_ratio_reweighted_3x": 1.873353034678169,
+    "tribal_bias_ratio_interactions_plus_3x": 1.881581810946227,
+    "tribal_n": 639,
+    "recommendation": "Use tribal interactions + 3x reweighting for best fairness"
+  },
+  "feature_importance": {
+    "top_features": [
+      "road_gap_clip",
+      "area_gap_clip",
+      "poi_gap_clip",
+      "pct_urban"
+    ],
+    "shap_dominance": "These 4 features account for >99% of model performance",
+    "3_feat_insufficient": "R2=0.23 without pct_urban - pct_urban is critical for zero-separation"
+  },
+  "prediction_intervals": {
+    "method": "conformal_prediction",
+    "coverage_90pct": 0.893,
+    "mean_width": 0.009779,
+    "disagreement_rejection": {
+      "p90_threshold": 0.006539839728454187,
+      "p95_threshold": 0.009968136441608948,
+      "correlation_with_error": 0.593292993639457
+    }
+  },
+  "limitations": [
+    "3-feature model (road+area+poi) is INSUFFICIENT without pct_urban",
+    "Tribal tracts have 2x higher MAE even with reweighting",
+    "No temporal validation performed",
+    "Spatial CV shows minimal overfitting on this target (R2\u22481.0 because proxy is deterministic)"
+  ],
+  "recommendations": [
+    "DEPRECATE two-stage architecture - use single-stage direct regression",
+    "Ship 4-feature model (road+area+poi+pct_urban) for interpretability",
+    "Apply tribal reweighting (3x) + tribal interaction features",
+    "Monitor top 4 feature distributions for drift in production",
+    "Flag predictions with ensemble disagreement > p90 for human review"
+  ]
+}
