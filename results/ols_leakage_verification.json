@@ -1,0 +1,75 @@
+{
+  "test1_5feat_ols": {
+    "r2": 1.0,
+    "rmse": 6.191093857017432e-16,
+    "max_error": 2.0872192862952943e-14,
+    "intercept": -1.0000000000000004,
+    "coefficients": {
+      "bldg_gap_clip": -0.2499999999992762,
+      "area_gap_clip": -0.500000000000508,
+      "road_gap_clip": -0.2500000000000047,
+      "poi_gap_clip": -0.24999999999998737,
+      "pct_urban": 1.0000000000000004
+    },
+    "expected_coefficients": {
+      "bldg_gap_clip": -0.25,
+      "area_gap_clip": -0.5,
+      "road_gap_clip": -0.25,
+      "poi_gap_clip": -0.25,
+      "pct_urban": 1.0
+    },
+    "verdict": "EXACT_FORMULA"
+  },
+  "test2_pct_urban_only": {
+    "r2": 0.9986804014623804,
+    "rmse": 0.014214522582670116,
+    "intercept": -1.0119855941529599,
+    "coef": 1.0105259999819778,
+    "verdict": "pct_urban dominates target"
+  },
+  "test3_gaps_only": {
+    "r2": 0.16455603166819055,
+    "coefficients": {
+      "bldg_gap_clip": 153.27205183926728,
+      "area_gap_clip": -110.95175671805558,
+      "road_gap_clip": -2.4200823728739858,
+      "poi_gap_clip": -11.768505425899876
+    },
+    "verdict": "gaps insufficient without pct_urban"
+  },
+  "test4_residuals": {
+    "residual_std": 6.149010321957003e-16,
+    "residual_max_abs": 2.0872192862952943e-14,
+    "top_residual_correlations": {
+      "rural_continuous": 0.5231110548612647,
+      "rural_indicator": 0.5065659074708971,
+      "pop_rural": 0.4307283368491349,
+      "rural_x_bldg_clip": 0.4208505832069375,
+      "pop_urban": 0.3855634653471423,
+      "rural_x_risk": 0.3776289004707109,
+      "bldg_road_diff": 0.3555058226864678,
+      "rucc_2023": 0.33440000570491824,
+      "road_gap": 0.3338433852056998,
+      "usfs_Exposure_mean": 0.31473382983288223
+    },
+    "verdict": "NO residual signal"
+  },
+  "test5_trivial_gaps": {
+    "threshold": 0.001,
+    "n_trivial": 72566,
+    "n_total": 85396,
+    "pct_trivial": 84.97587709026185,
+    "pct_urban_minus_1_r2_on_trivial": 0.9999999928182536,
+    "verdict": "Target is essentially pct_urban - 1 for most tracts"
+  },
+  "test6_non_leakage_features": {
+    "features": [
+      "cvi_baseline_environment",
+      "rural_indicator",
+      "rural_continuous"
+    ],
+    "r2": 0.9986837508742281,
+    "verdict": "Some signal exists"
+  },
+  "final_verdict": "\ud83d\udea8\ud83d\udea8\ud83d\udea8 CONFIRMED: TARGET IS AN EXACT DETERMINISTIC FORMULA \ud83d\udea8\ud83d\udea8\ud83d\udea8\n    \n    proxy_merged = -(bldg_gap_clip + 2\u00b7area_gap_clip + road_gap_clip + poi_gap_clip) / 4 + pct_urban - 1\n    \n    ALL ML results (R\u00b2, SHAP, ensemble, tribal bias, spatial CV) are CIRCULAR.\n    The model is not \"learning\" anything \u2014 it is inverting a known formula.\n    \n    RECOMMENDED ACTION:\n    1. RETIRE all ML models for proxy_merged prediction\n    2. REPORT the formula directly as the solution\n    3. For the REAL target (coverage_gap_score, when released), test if the \n       same formula applies before building any ML\n    4. Document this as a formula discovery, not a modeling achievement"
+}
