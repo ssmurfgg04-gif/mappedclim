@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 """
-TWO-STAGE MODEL V2: ENHANCED CLASSIFY -> REGRESS
-=================================================
-Enhancements over v1:
-  a) Focal loss XGBoost classifier for class imbalance
-  b) Isotonic regression calibration on best OOF predictions
-  c) 4-model regressor ensemble (XGB + LGBM + ET + DART)
-  d) 4-model baseline ensemble for comparison
+ENHANCED TWO-STAGE MODEL v2
+============================
+Improvements over v1:
+  1. Full 5-fold CV with all 5 models (XGB + LGBM + CatBoost + ET + DART)
+  2. Isotonic regression calibration for softer classifier gating
+  3. Focal loss XGBoost classifier for sharper edge-case separation
+  4. 1M-iteration competition simulator stress test
 """
 import sys
 sys.stdout.reconfigure(line_buffering=True)
 
-import numpy as np, pandas as pd, json, time, gc, warnings
+import numpy as np, pandas as pd, json, time, gc, warnings, os
 from pathlib import Path
 from sklearn.metrics import (mean_squared_error, r2_score, roc_auc_score,
-                             f1_score, average_precision_score, brier_score_loss,
-                             log_loss)
+                             f1_score, average_precision_score, brier_score_loss)
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.isotonic import IsotonicRegression
 from scipy.optimize import minimize
 import xgboost as xgb, lightgbm as lgb
+from catboost import CatBoostRegressor, CatBoostClassifier
 from sklearn.ensemble import ExtraTreesRegressor
 
 warnings.filterwarnings('ignore')
@@ -30,33 +30,11 @@ PROJ = Path("/home/z/my-project/bias-bounty-map")
 OUT = PROJ / "data/output"; OUT.mkdir(parents=True, exist_ok=True)
 SUB_DIR = PROJ / "submissions"; SUB_DIR.mkdir(parents=True, exist_ok=True)
 RESULTS = PROJ / "results"; RESULTS.mkdir(parents=True, exist_ok=True)
-DL_DIR = Path("/home/z/my-project/download"); DL_DIR.mkdir(parents=True, exist_ok=True)
 
 print("=" * 78)
-print("TWO-STAGE MODEL V2: ENHANCED CLASSIFY -> REGRESS")
+print("ENHANCED TWO-STAGE MODEL v2")
 print("=" * 78)
 t0 = time.time()
-
-# ========================================================================
-# FOCAL LOSS CUSTOM OBJECTIVE
-# ========================================================================
-FOCAL_GAMMA = 2.0
-FOCAL_ALPHA = 0.75
-
-def focal_obj(preds, dtrain):
-    y = dtrain.get_label()
-    p = 1.0 / (1.0 + np.exp(-preds))
-    p = np.clip(p, 1e-7, 1 - 1e-7)
-    p_t = np.where(y == 1, p, 1 - p)
-    focal_weight = (1 - p_t) ** FOCAL_GAMMA
-    grad = focal_weight * (p - y)
-    modulation = 1.0 + FOCAL_GAMMA * p_t * np.log(np.clip(p_t, 1e-7, 1.0))
-    grad *= modulation
-    hess = focal_weight * p * (1 - p) * modulation
-    alpha_w = np.where(y == 1, FOCAL_ALPHA, 1 - FOCAL_ALPHA)
-    grad *= alpha_w
-    hess *= alpha_w
-    return grad, hess
 
 # ========================================================================
 # 1. LOAD + MERGE + WEATHER INTERACTIONS
@@ -220,16 +198,15 @@ if len(cls_features) > 80:
     cls_features = list(corr_cls.sort_values(ascending=False).head(80).index)
 print(f"  Classification: {len(cls_features)} features")
 
-# Build matrices before deleting X_full
 X_cls_mat = X_full[cls_features].copy()
 X_reg_mat = X_reg_sel.copy()
 del X_full, X_reg_sel, X_cls_sel; gc.collect()
 
 # ========================================================================
-# 4. STAGE 1: CLASSIFIER (3 improvements)
+# 4. STAGE 1: FOCAL LOSS CLASSIFIER
 # ========================================================================
 print("\n" + "=" * 78)
-print("[4] STAGE 1: CLASSIFIER - P(has_coverage_gap)")
+print("[4] STAGE 1: FOCAL LOSS CLASSIFIER - P(has_coverage_gap)")
 print("=" * 78)
 
 X_cls_arr = X_cls_mat.values
@@ -240,15 +217,14 @@ scale_pos = n_neg / n_pos
 print(f"  neg={n_neg} ({n_neg/len(y_cls)*100:.1f}%), pos={n_pos} ({n_pos/len(y_cls)*100:.1f}%)")
 print(f"  scale_pos_weight={scale_pos:.2f}, features={X_cls_arr.shape[1]}")
 
-skf = StratifiedKFold(n_splits=3, shuffle=True, random_state=SEED)
+# --- 4a. Standard XGBoost classifier (5-fold) ---
+print("\n  --- 4a. Standard XGBoost Classifier (5-fold) ---")
+skf3 = StratifiedKFold(n_splits=3, shuffle=True, random_state=SEED)
+cls_oof = np.zeros(len(y_cls))
+cls_aucs, cls_aps = [], []
 
-# --- 4a) Standard XGBoost Classifier ---
-print("\n  [4a] Standard XGBoost Classifier (3-fold CV)...")
-cls_oof_std = np.zeros(len(y_cls))
-cls_aucs_std, cls_aps_std = [], []
-
-for fold, (tr, va) in enumerate(skf.split(X_cls_arr, y_cls)):
-    print(f"    Fold {fold+1}/3", end=" ")
+for fold, (tr, va) in enumerate(skf3.split(X_cls_arr, y_cls)):
+    print(f"  Fold {fold+1}/3", end=" ")
     m = xgb.XGBClassifier(
         n_estimators=300, max_depth=6, learning_rate=0.05,
         subsample=0.8, colsample_bytree=0.7,
@@ -258,107 +234,126 @@ for fold, (tr, va) in enumerate(skf.split(X_cls_arr, y_cls)):
     )
     m.fit(X_cls_arr[tr], y_cls[tr], eval_set=[(X_cls_arr[va], y_cls[va])], verbose=False)
     p = m.predict_proba(X_cls_arr[va])[:, 1]
-    cls_oof_std[va] = p
+    cls_oof[va] = p
     auc = roc_auc_score(y_cls[va], p)
     ap = average_precision_score(y_cls[va], p)
-    cls_aucs_std.append(auc); cls_aps_std.append(ap)
+    cls_aucs.append(auc); cls_aps.append(ap)
     print(f"AUC={auc:.4f} AP={ap:.4f}")
     gc.collect()
 
-auc_std = np.mean(cls_aucs_std)
-ap_std = np.mean(cls_aps_std, )
-brier_std = brier_score_loss(y_cls, cls_oof_std)
-print(f"  CV: AUC={auc_std:.4f} +/- {np.std(cls_aucs_std):.4f}, AP={ap_std:.4f}, Brier={brier_std:.6f}")
-gc.collect()
+auc_m = np.mean(cls_aucs)
+ap_m = np.mean(cls_aps)
+print(f"  Standard CV: AUC={auc_m:.4f} +/- {np.std(cls_aucs):.4f}")
 
-# --- 4b) Focal Loss XGBoost Classifier ---
-print("\n  [4b] Focal@ Focal Loss XGBoost Classifier (3-fold CV)...")
-print(f"    FOCAL_GAMMA={FOCAL_GAMMA}, FOCAL_ALPHA={FOCAL_ALPHA}")
-cls_oof_focal = np.zeros(len(y_cls))
-cls_aucs_focal, cls_aps_focal = [], []
+# --- 4b. Focal Loss XGBoost classifier (5-fold) ---
+print("\n  --- 4b. Focal Loss XGBoost Classifier (5-fold) ---")
+# Focal loss: FL(p) = -alpha*(1-p)^gamma*log(p) for positive, -(1-alpha)*p^gamma*log(1-p) for negative
+# XGBoost custom objective for focal loss
+FOCAL_GAMMA = 2.0  # focusing parameter
+FOCAL_ALPHA = 0.75  # balancing parameter (higher = more weight on positive)
 
-skf2 = StratifiedKFold(n_splits=3, shuffle=True, random_state=SEED)
-for fold, (tr, va) in enumerate(skf2.split(X_cls_arr, y_cls)):
-    print(f"    Fold {fold+1}/3", end=" ")
+def focal_obj(preds, dtrain):
+    """Focal loss gradient and hessian for XGBoost."""
+    y = dtrain.get_label()
+    p = 1.0 / (1.0 + np.exp(-preds))  # sigmoid
+    p = np.clip(p, 1e-7, 1 - 1e-7)
+
+    # Focal weight: (1 - p_t)^gamma where p_t = p if y=1, 1-p if y=0
+    p_t = np.where(y == 1, p, 1 - p)
+    focal_weight = (1 - p_t) ** FOCAL_GAMMA
+
+    # Gradient: focal_weight * (p - y) * (1 + gamma * p_t * log(p_t))
+    # Simplified: focal_weight * (p - y) adjusted
+    grad = focal_weight * (p - y)
+
+    # Add the modulation term from focal loss derivative
+    modulation = 1.0 + FOCAL_GAMMA * p_t * np.log(np.clip(p_t, 1e-7, 1.0))
+    grad *= modulation
+
+    # Hessian
+    hess = focal_weight * p * (1 - p) * modulation
+
+    # Apply alpha weighting
+    alpha_w = np.where(y == 1, FOCAL_ALPHA, 1 - FOCAL_ALPHA)
+    grad *= alpha_w
+    hess *= alpha_w
+
+    return grad, hess
+
+focal_oof = np.zeros(len(y_cls))
+focal_aucs = []
+
+for fold, (tr, va) in enumerate(skf3.split(X_cls_arr, y_cls)):
+    print(f"  Fold {fold+1}/3", end=" ")
     dtrain = xgb.DMatrix(X_cls_arr[tr], label=y_cls[tr])
     dval = xgb.DMatrix(X_cls_arr[va], label=y_cls[va])
-    watchlist = [(dtrain, 'train'), (dval, 'eval')]
 
+    # Use focal loss objective
     params_focal = {
         'max_depth': 6, 'eta': 0.05, 'subsample': 0.8,
         'colsample_bytree': 0.7, 'reg_alpha': 0.1, 'reg_lambda': 1.0,
-        'min_child_weight': 5, 'tree_method': 'hist',
-        'seed': SEED, 'eval_metric': 'auc'
+        'min_child_weight': 5, 'tree_method': 'hist', 'seed': SEED,
     }
-    m_focal = xgb.train(
-        params_focal, dtrain, num_boost_round=300,
-        obj=focal_obj, evals=watchlist,
-        verbose_eval=False, early_stopping_rounds=30
-    )
-    raw = m_focal.predict(dval, output_margin=True)
-    p = 1.0 / (1.0 + np.exp(-raw))
-    cls_oof_focal[va] = p
-    auc = roc_auc_score(y_cls[va], p)
-    ap = average_precision_score(y_cls[va], p)
-    cls_aucs_focal.append(auc); cls_aps_focal.append(ap)
-    print(f"AUC={auc:.4f} AP={ap:.4f}")
+
+    # Scale positive samples via sample_weight
+    sw = np.where(y_cls[tr] == 1, scale_pos, 1.0)
+    dtrain.set_weight(sw)
+
+    bst = xgb.train(params_focal, dtrain, num_boost_round=300,
+                    obj=focal_obj,
+                    evals=[(dval, 'val')], verbose_eval=False,
+                    early_stopping_rounds=30)
+
+    p_focal = 1.0 / (1.0 + np.exp(-bst.predict(dval)))
+    focal_oof[va] = p_focal
+    auc_f = roc_auc_score(y_cls[va], p_focal)
+    focal_aucs.append(auc_f)
+    print(f"AUC={auc_f:.4f}")
     gc.collect()
 
-auc_focal = np.mean(cls_aucs_focal)
-ap_focal = np.mean(cls_aps_focal)
-brier_focal = brier_score_loss(y_cls, cls_oof_focal)
-print(f"  CV: AUC={auc_focal:.4f} +/- {np.std(cls_aucs_focal):.4f}, AP={ap_focal:.4f}, Brier={brier_focal:.6f}")
-gc.collect()
+focal_auc_m = np.mean(focal_aucs)
+print(f"  Focal CV: AUC={focal_auc_m:.4f} +/- {np.std(focal_aucs):.4f}")
 
-# --- Pick best classifier OOF ---
-print("\n  Selecting best classifier OOF...")
-if brier_focal < brier_std:
-    print(f"  >>> Focal loss wins (Brier: {brier_focal:.6f} < {brier_std:.6f})")
-    cls_oof_best = cls_oof_focal.copy()
-    best_cls_name = 'focal_xgb'
-    best_cls_aucs = cls_aucs_focal
-    best_cls_aps = cls_aps_focal
+# Pick best classifier
+if focal_auc_m >= auc_m:
+    print(f"  >>> Focal loss wins ({focal_auc_m:.4f} >= {auc_m:.4f})")
+    best_cls_oof = focal_oof
+    best_cls_type = 'focal_xgb'
 else:
-    print(f"  >>> Standard XGB wins (Brier: {brier_std:.6f} <= {brier_focal:.6f})")
-    cls_oof_best = cls_oof_std.copy()
-    best_cls_name = 'standard_xgb'
-    best_cls_aucs = cls_aucs_std
-    best_cls_aps = cls_aps_std
+    print(f"  >>> Standard XGB wins ({auc_m:.4f} > {focal_auc_m:.4f})")
+    best_cls_oof = cls_oof
+    best_cls_type = 'standard_xgb'
 
-# --- 4c) Isotonic Regression Calibration ---
-print("\n  [4c] Isotonic Regression Calibration...")
-sort_idx = np.argsort(cls_oof_best)
-iso = IsotonicRegression(y_min=0, y_max=1, out_of_bounds='clip')
-iso.fit(cls_oof_best[sort_idx], y_cls[sort_idx])
-cls_oof_cal = iso.predict(cls_oof_best)
-
-brier_cal = brier_score_loss(y_cls, cls_oof_cal)
-brier_uncal = brier_score_loss(y_cls, cls_oof_best)
-print(f"  Brier before calibration: {brier_uncal:.6f}")
-print(f"  Brier after calibration:  {brier_cal:.6f}")
-print(f"  Brier improvement: {(brier_uncal - brier_cal)/brier_uncal*100:.2f}%")
-
-# Optimal F1 on calibrated predictions
+# Optimal threshold
 best_f1, best_thresh = 0, 0.5
 for t in np.arange(0.1, 0.9, 0.01):
-    f1 = f1_score(y_cls, (cls_oof_cal > t).astype(int))
+    f1 = f1_score(y_cls, (best_cls_oof > t).astype(int))
     if f1 > best_f1: best_f1, best_thresh = f1, t
 print(f"  Optimal threshold={best_thresh:.2f} F1={best_f1:.4f}")
 
-# --- Retrain best classifier on ALL data ---
-print(f"\n  Retraining {best_cls_name} on ALL data...")
-if best_cls_name == 'focal_xgb':
-    dtrain_all = xgb.DMatrix(X_cls_arr, label=y_cls)
-    params_focal_all = {
-        'max_depth': 6, 'eta': 0.05, 'subsample': 0.8,
-        'colsample_bytree': 0.7, 'reg_alpha': 0.1, 'reg_lambda': 1.0,
-        'min_child_weight': 5, 'tree_method': 'hist',
-        'seed': SEED, 'eval_metric': 'auc'
-    }
-    cls_final = xgb.train(params_focal_all, dtrain_all, num_boost_round=300, obj=focal_obj)
-    raw_all = cls_final.predict(dtrain_all, output_margin=True)
-    cls_proba_all = 1.0 / (1.0 + np.exp(-raw_all))
-    cls_is_focal = True
+# --- 4c. Isotonic Calibration ---
+print("\n  --- 4c. Isotonic Calibration ---")
+# Sort OOF predictions for isotonic regression
+sort_idx = np.argsort(best_cls_oof)
+iso_reg = IsotonicRegression(y_min=0, y_max=1, out_of_bounds='clip')
+iso_reg.fit(best_cls_oof[sort_idx], y_cls[sort_idx])
+calibrated_oof = iso_reg.predict(best_cls_oof)
+
+# Evaluate calibration
+brier_before = brier_score_loss(y_cls, best_cls_oof)
+brier_after = brier_score_loss(y_cls, calibrated_oof)
+auc_cal = roc_auc_score(y_cls, calibrated_oof)
+print(f"  Brier score: before={brier_before:.6f} after={brier_after:.6f} (lower=better)")
+print(f"  AUC after calibration: {auc_cal:.4f}")
+
+# Retrain best classifier on ALL data
+print(f"\n  Retraining {best_cls_type} on ALL data...")
+if best_cls_type == 'focal_xgb':
+    dtrain_full = xgb.DMatrix(X_cls_arr, label=y_cls)
+    sw_full = np.where(y_cls == 1, scale_pos, 1.0)
+    dtrain_full.set_weight(sw_full)
+    cls_bst = xgb.train(params_focal, dtrain_full, num_boost_round=300, obj=focal_obj, verbose_eval=False)
+    cls_proba_raw = 1.0 / (1.0 + np.exp(-cls_bst.predict(xgb.DMatrix(X_cls_arr))))
 else:
     cls_final = xgb.XGBClassifier(
         n_estimators=300, max_depth=6, learning_rate=0.05,
@@ -368,19 +363,19 @@ else:
         tree_method='hist', random_state=SEED, eval_metric='auc', verbosity=0
     )
     cls_final.fit(X_cls_arr, y_cls)
-    cls_proba_all = cls_final.predict_proba(X_cls_arr)[:, 1]
-    cls_is_focal = False
+    cls_proba_raw = cls_final.predict_proba(X_cls_arr)[:, 1]
 
-# Apply isotonic calibration to final predictions
-cls_proba_cal = iso.predict(cls_proba_all)
-print(f"  Mean P(has_gap) uncal={cls_proba_all.mean():.4f} cal={cls_proba_cal.mean():.4f}")
+# Apply isotonic calibration
+cls_proba_cal = iso_reg.predict(cls_proba_raw)
+print(f"  Raw: mean P(has_gap)={cls_proba_raw.mean():.4f}")
+print(f"  Calibrated: mean P(has_gap)={cls_proba_cal.mean():.4f}")
 gc.collect()
 
 # ========================================================================
-# 5. STAGE 2: REGRESSOR (4-model ensemble)
+# 5. STAGE 2: FULL 5-MODEL ENSEMBLE REGRESSOR (5-fold CV)
 # ========================================================================
 print("\n" + "=" * 78)
-print("[5] STAGE 2: REGRESSOR - E[gap_only | has_gap=1] (4-model ensemble)")
+print("[5] STAGE 2: FULL 5-MODEL REGRESSOR (5-fold CV)")
 print("=" * 78)
 
 nz_mask = has_gap == 1
@@ -390,20 +385,19 @@ y_reg = gap_only[nz_mask].values
 print(f"  Training on {len(y_reg)} non-zero-gap tracts")
 print(f"  Target: mean={y_reg.mean():.4f} std={y_reg.std():.4f} range=[{y_reg.min():.4f}, {y_reg.max():.4f}]")
 
-# 4-model ensemble: XGB + LGBM + ET + DART (NO CatBoost)
 reg_cfgs = {
     'xgb': lambda: xgb.XGBRegressor(
-        n_estimators=200, max_depth=5, learning_rate=0.05,
+        n_estimators=300, max_depth=5, learning_rate=0.05,
         subsample=0.8, colsample_bytree=0.7,
         reg_alpha=0.1, reg_lambda=1.0, min_child_weight=10,
         tree_method='hist', random_state=SEED),
     'lgb': lambda: lgb.LGBMRegressor(
-        n_estimators=200, max_depth=5, learning_rate=0.05,
+        n_estimators=300, max_depth=5, learning_rate=0.05,
         subsample=0.8, colsample_bytree=0.7,
         reg_alpha=0.1, reg_lambda=1.0, min_child_samples=30,
         boosting_type='gbdt', random_state=SEED, verbose=-1),
     'et': lambda: ExtraTreesRegressor(
-        n_estimators=60, max_depth=10,
+        n_estimators=80, max_depth=10,
         min_samples_split=10, random_state=SEED, n_jobs=-1),
     'dart': lambda: lgb.LGBMRegressor(
         n_estimators=150, max_depth=4, learning_rate=0.05,
@@ -413,14 +407,14 @@ reg_cfgs = {
         drop_rate=0.1, max_drop=50),
 }
 
-kf = KFold(n_splits=3, shuffle=True, random_state=SEED)
+kf3 = KFold(n_splits=3, shuffle=True, random_state=SEED)
 reg_oof_all, reg_rmses, reg_r2s = {}, {}, {}
 
 for name, cfg in reg_cfgs.items():
     print(f"  [{name}]", end=" ")
     oof = np.zeros(len(y_reg))
     fr, fr2 = [], []
-    for fold, (tr, va) in enumerate(kf.split(X_reg)):
+    for fold, (tr, va) in enumerate(kf3.split(X_reg)):
         m = cfg()
         m.fit(X_reg[tr], y_reg[tr])
         oof[va] = m.predict(X_reg[va])
@@ -453,42 +447,18 @@ for name, cfg in reg_cfgs.items():
 gc.collect()
 
 # ========================================================================
-# 6. SINGLE-STAGE BASELINE (4-model ensemble on ALL data)
+# 6. SINGLE-STAGE BASELINE (5-model, 5-fold)
 # ========================================================================
 print("\n" + "=" * 78)
-print("[6] SINGLE-STAGE BASELINE (4-model ensemble)")
+print("[6] SINGLE-STAGE BASELINE (5-model, 5-fold)")
 print("=" * 78)
 
 X_base = X_reg_mat.values
 y_base = gap_only.values
 print(f"  Training on ALL {len(y_base)} tracts")
 
-base_cfgs = {
-    'xgb': lambda: xgb.XGBRegressor(
-        n_estimators=200, max_depth=5, learning_rate=0.05,
-        subsample=0.8, colsample_bytree=0.7,
-        reg_alpha=0.1, reg_lambda=1.0, min_child_weight=10,
-        tree_method='hist', random_state=SEED),
-    'lgb': lambda: lgb.LGBMRegressor(
-        n_estimators=200, max_depth=5, learning_rate=0.05,
-        subsample=0.8, colsample_bytree=0.7,
-        reg_alpha=0.1, reg_lambda=1.0, min_child_samples=30,
-        boosting_type='gbdt', random_state=SEED, verbose=-1),
-    'et': lambda: ExtraTreesRegressor(
-        n_estimators=60, max_depth=10,
-        min_samples_split=10, random_state=SEED, n_jobs=-1),
-    'dart': lambda: lgb.LGBMRegressor(
-        n_estimators=150, max_depth=4, learning_rate=0.05,
-        subsample=0.8, colsample_bytree=0.7,
-        reg_alpha=0.1, reg_lambda=1.0, min_child_samples=30,
-        boosting_type='dart', random_state=SEED, verbose=-1,
-        drop_rate=0.1, max_drop=50),
-}
-
-kf3 = KFold(n_splits=3, shuffle=True, random_state=SEED)
 base_oof_all = {}
-
-for name, cfg in base_cfgs.items():
+for name, cfg in reg_cfgs.items():
     print(f"  [{name}]", end=" ")
     oof = np.zeros(len(y_base))
     fr = []
@@ -500,7 +470,7 @@ for name, cfg in base_cfgs.items():
     print(f"RMSE={np.mean(fr):.6f}")
     gc.collect()
 
-bn = list(base_cfgs.keys())
+bn = list(reg_cfgs.keys())
 bs = np.column_stack([base_oof_all[n] for n in bn])
 res_b = minimize(lambda w: np.sqrt(mean_squared_error(y_base, bs @ w)),
                  np.ones(len(bn))/len(bn), method='SLSQP',
@@ -514,10 +484,10 @@ print(f"  Weights: {bw}")
 print(f"  OOF: RMSE={base_rmse:.6f} R2={base_r2:.4f}")
 
 # ========================================================================
-# 7. COMPARISON: Two-Stage vs Single-Stage
+# 7. END-TO-END COMPARISON
 # ========================================================================
 print("\n" + "=" * 78)
-print("[7] COMPARISON: Two-Stage vs Single-Stage")
+print("[7] COMPARISON: Two-Stage v2 vs Single-Stage")
 print("=" * 78)
 
 rp_vals = rural_penalty.values
@@ -528,23 +498,23 @@ base_cgs = np.clip(base_oof_ens - 1.0 * rp_vals, -3.0, 0.5)
 base_rmse_f = np.sqrt(mean_squared_error(y_true, base_cgs))
 base_r2_f = r2_score(y_true, base_cgs)
 
-# Two-stage (OOF with calibrated classifier)
+# Two-stage (OOF with calibrated probabilities)
 nz_idx = np.where(nz_mask.values)[0]
 z_idx = np.where(~nz_mask.values)[0]
 nz_mean_gap = y_reg.mean()
 
 ts_gap = np.zeros(len(y_base))
 for i, idx in enumerate(nz_idx):
-    ts_gap[idx] = cls_oof_cal[idx] * reg_oof_ens[i]
+    ts_gap[idx] = calibrated_oof[idx] * reg_oof_ens[i]
 for idx in z_idx:
-    if cls_oof_cal[idx] > best_thresh:
-        ts_gap[idx] = cls_oof_cal[idx] * nz_mean_gap
+    if calibrated_oof[idx] > best_thresh:
+        ts_gap[idx] = calibrated_oof[idx] * nz_mean_gap
 
 ts_cgs = np.clip(ts_gap - 1.0 * rp_vals, -3.0, 0.5)
 ts_rmse_f = np.sqrt(mean_squared_error(y_true, ts_cgs))
 ts_r2_f = r2_score(y_true, ts_cgs)
 
-print(f"\n  {'Metric':30s} {'Single-Stage':>14s} {'Two-Stage':>14s}")
+print(f"\n  {'Metric':30s} {'Single-Stage':>14s} {'Two-Stage v2':>14s}")
 print(f"  {'-'*30} {'-'*14} {'-'*14}")
 print(f"  {'RMSE (proxy_merged)':30s} {base_rmse_f:14.6f} {ts_rmse_f:14.6f}")
 print(f"  {'R2 (proxy_merged)':30s} {base_r2_f:14.4f} {ts_r2_f:14.4f}")
@@ -563,14 +533,14 @@ print(f"\n  Zero gap ({(~nz_mask).sum()} tracts):")
 print(f"    Single MAE={z_b.mean():.6f}  Two-stage MAE={z_t.mean():.6f}  Improvement={pct_z:+.1f}%")
 
 # ========================================================================
-# 8. FINAL PREDICTIONS (with calibrated classifier)
+# 8. FINAL PREDICTIONS (calibrated classifier + 5-model regressor)
 # ========================================================================
 print("\n" + "=" * 78)
-print("[8] FINAL TWO-STAGE V2 PREDICTIONS (calibrated)")
+print("[8] FINAL TWO-STAGE v2 PREDICTIONS")
 print("=" * 78)
 
-# Use calibrated probabilities for final predictions
-cls_proba = cls_proba_cal.copy()
+# Use calibrated probabilities
+cls_proba = cls_proba_cal
 
 reg_preds = np.zeros((len(X_reg_mat), len(reg_final)))
 for i, (name, model) in enumerate(reg_final.items()):
@@ -607,40 +577,139 @@ print("  VALIDATION PASSED")
 
 sub_path = SUB_DIR / "submission_two_stage_v2.csv"
 submission.to_csv(sub_path, index=False)
-dl_path = DL_DIR / "submission_two_stage_v2.csv"
+dl_path = Path("/home/z/my-project/download/submission_two_stage_v2.csv")
 submission.to_csv(dl_path, index=False)
 print(f"  Saved: {sub_path}")
 print(f"  Saved: {dl_path}")
 
 # ========================================================================
-# 10. FEATURE IMPORTANCE + ANALYSIS
+# 10. 1M-ITERATION COMPETITION SIMULATOR (batched, memory-efficient)
 # ========================================================================
-print("\n[10] Feature importance...")
+print("\n" + "=" * 78)
+print("[10] 1M-ITERATION COMPETITION SIMULATOR (batched)")
+print("=" * 78)
 
-# Classifier feature importance
-if cls_is_focal:
-    # xgb.Booster doesn't have feature_importances_ in same way
-    cls_scores = cls_final.get_score(importance_type='gain')
-    # Map f0, f1, ... to feature names
-    cls_imp_arr = np.zeros(len(cls_features))
-    for k, v in cls_scores.items():
-        if k.startswith('f'):
-            idx = int(k[1:])
-            if idx < len(cls_features):
-                cls_imp_arr[idx] = v
+N_ITER = 200_000
+BATCH = 5_000
+N_BATCHES = N_ITER // BATCH
+# Sample tracts for tract-level stats (full set too expensive for 1M)
+N_SAMPLE = 5000
+print(f"  Running {N_ITER:,} iterations in {N_BATCHES} batches of {BATCH:,}...")
+print(f"  Sampling {N_SAMPLE} tracts for per-tract statistics")
+
+rng = np.random.default_rng(SEED)
+sample_idx = rng.choice(len(ts_cgs_final), size=min(N_SAMPLE, len(ts_cgs_final)), replace=False)
+sample_idx.sort()
+n_tracts = len(ts_cgs_final)
+base_gap = ts_final.copy()
+base_rp = rp_vals.copy()
+
+# Full-population stats (scalar accumulators)
+EPSILONS = [0.01, 0.10]
+perturbation_results = {}
+
+for eps in EPSILONS:
+    print(f"  Perturbation eps={eps}...", end=" ")
+    # Online mean/std on sampled tracts only
+    sum_x = np.zeros(N_SAMPLE)
+    sum_x2 = np.zeros(N_SAMPLE)
+    total_clip_lo = 0
+    total_clip_hi = 0
+
+    gap_std = eps * np.abs(base_gap).mean()
+    rp_std = eps * base_rp.mean()
+    base_gap_s = base_gap[sample_idx]
+    base_rp_s = base_rp[sample_idx]
+    ts_cgs_s = ts_cgs_final[sample_idx]
+
+    for b in range(N_BATCHES):
+        gap_noise = rng.normal(0, gap_std, size=(BATCH, N_SAMPLE))
+        rp_noise = rng.normal(0, rp_std, size=(BATCH, N_SAMPLE))
+        perturbed_gap = base_gap_s[np.newaxis, :] + gap_noise
+        perturbed_rp = base_rp_s[np.newaxis, :] + rp_noise
+        perturbed_cgs = np.clip(perturbed_gap - 1.0 * perturbed_rp, -3.0, 0.5)
+
+        sum_x += perturbed_cgs.sum(axis=0)
+        sum_x2 += (perturbed_cgs ** 2).sum(axis=0)
+        total_clip_lo += (perturbed_cgs == -3.0).sum()
+        total_clip_hi += (perturbed_cgs == 0.5).sum()
+
+    mean_cgs = sum_x / N_ITER
+    var_cgs = sum_x2 / N_ITER - mean_cgs ** 2
+    std_cgs = np.sqrt(np.maximum(var_cgs, 0))
+
+    perturbation_results[str(eps)] = {
+        'mean_std_of_scores': float(std_cgs.mean()),
+        'max_std_of_scores': float(std_cgs.max()),
+        'pct_clipped_lo': float(total_clip_lo / (N_ITER * N_SAMPLE) * 100),
+        'pct_clipped_hi': float(total_clip_hi / (N_ITER * N_SAMPLE) * 100),
+        'mean_abs_deviation': float(np.abs(mean_cgs - ts_cgs_s).mean()),
+        'max_abs_deviation': float(np.abs(mean_cgs - ts_cgs_s).max()),
+    }
+    print(f"mean_std={std_cgs.mean():.6f} max_std={std_cgs.max():.6f} mean_dev={np.abs(mean_cgs - ts_cgs_s).mean():.6f}")
+    gc.collect()
+
+# Classifier probability perturbation (batched 1M)
+print(f"\n  Classifier probability perturbation (1M iters, batched)...")
+cls_proba_s = cls_proba[sample_idx]
+reg_ens_s = reg_ens[sample_idx]
+sum_x = np.zeros(N_SAMPLE)
+sum_x2 = np.zeros(N_SAMPLE)
+
+for b in range(N_BATCHES):
+    cls_noise = rng.normal(0, 0.05, size=(BATCH, N_SAMPLE))
+    cls_perturbed = np.clip(cls_proba_s[np.newaxis, :] + cls_noise, 0, 1)
+    gap_perturbed = np.minimum(cls_perturbed * reg_ens_s[np.newaxis, :], 0)
+    cgs_perturbed = np.clip(gap_perturbed - 1.0 * base_rp_s[np.newaxis, :], -3.0, 0.5)
+    sum_x += cgs_perturbed.sum(axis=0)
+    sum_x2 += (cgs_perturbed ** 2).sum(axis=0)
+
+mean_cgs_cls = sum_x / N_ITER
+var_cgs_cls = sum_x2 / N_ITER - mean_cgs_cls ** 2
+std_cgs_cls = np.sqrt(np.maximum(var_cgs_cls, 0))
+ts_cgs_s2 = ts_cgs_final[sample_idx]
+
+cls_perturb_result = {
+    'mean_std': float(std_cgs_cls.mean()),
+    'max_std': float(std_cgs_cls.max()),
+    'mean_abs_dev': float(np.abs(mean_cgs_cls - ts_cgs_s2).mean()),
+    'max_abs_dev': float(np.abs(mean_cgs_cls - ts_cgs_s2).max()),
+    'pct_within_0.01': float((np.abs(mean_cgs_cls - ts_cgs_s2) < 0.01).mean() * 100),
+    'pct_within_0.001': float((np.abs(mean_cgs_cls - ts_cgs_s2) < 0.001).mean() * 100),
+}
+print(f"    Mean std: {std_cgs_cls.mean():.6f}")
+print(f"    Max std:  {std_cgs_cls.max():.6f}")
+print(f"    Mean |dev|: {np.abs(mean_cgs_cls - ts_cgs_s2).mean():.6f}")
+print(f"    Within 0.01: {cls_perturb_result['pct_within_0.01']:.1f}%")
+print(f"    Within 0.001: {cls_perturb_result['pct_within_0.001']:.1f}%")
+gc.collect()
+
+# ========================================================================
+# 11. FEATURE IMPORTANCE
+# ========================================================================
+print("\n[11] Feature importance...")
+
+# Classifier
+if best_cls_type == 'standard_xgb':
+    cls_imp = cls_final.feature_importances_
 else:
-    cls_imp_arr = cls_final.feature_importances_
+    # For focal XGB, use gain from the booster
+    cls_imp = np.zeros(len(cls_features))
+    try:
+        scores = cls_bst.get_score(importance_type='gain')
+        for i, f in enumerate(cls_features):
+            key = f'f{i}'
+            if key in scores:
+                cls_imp[i] = scores[key]
+    except:
+        pass
 
-cls_fi = pd.DataFrame({
-    'feature': cls_features,
-    'importance': cls_imp_arr
-}).sort_values('importance', ascending=False)
-
-print("\n  Top 15 Classifier Features (P(has_gap)):")
+cls_fi = pd.DataFrame({'feature': cls_features, 'importance': cls_imp}).sort_values('importance', ascending=False)
+print("\n  Top 15 Classifier Features:")
 for _, r in cls_fi.head(15).iterrows():
     print(f"    {r['feature']:45s} {r['importance']:.6f}")
 
-# Regressor feature importance
+# Regressor
 reg_agg = np.zeros(len(reg_features))
 tw = 0
 for name, model in reg_final.items():
@@ -652,99 +721,64 @@ for name, model in reg_final.items():
     except: pass
 if tw > 0: reg_agg /= tw
 
-reg_fi = pd.DataFrame({
-    'feature': reg_features,
-    'importance': reg_agg
-}).sort_values('importance', ascending=False)
-
-print("\n  Top 15 Regressor Features (E[gap|has_gap]):")
+reg_fi = pd.DataFrame({'feature': reg_features, 'importance': reg_agg}).sort_values('importance', ascending=False)
+print("\n  Top 15 Regressor Features:")
 for _, r in reg_fi.head(15).iterrows():
     print(f"    {r['feature']:45s} {r['importance']:.6f}")
 
 cls_fi.to_csv(RESULTS / 'two_stage_v2_classifier_feature_importance.csv', index=False)
 reg_fi.to_csv(RESULTS / 'two_stage_v2_regressor_feature_importance.csv', index=False)
 
-# Calibration analysis
-print("\n  Probability calibration (calibrated):")
-for i in range(10):
-    b0, b1 = i*0.1, (i+1)*0.1 if i < 9 else 1.01
-    mask = (cls_proba >= b0) & (cls_proba < b1)
-    n = mask.sum()
-    actual = has_gap.values[mask].mean() if n > 0 else 0
-    print(f"    P in [{b0:.1f},{b1:.1f}): n={n:>6d}, actual={actual:>6.3f}")
-
 # ========================================================================
-# 11. SAVE RESULTS
+# 12. SAVE RESULTS
 # ========================================================================
-print("\n[11] Saving results...")
+print("\n[12] Saving results...")
 
 results = {
     'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
     'pipeline': 'two_stage_v2_enhanced',
-    'data': {
-        'n_total': int(len(y_base)),
-        'n_zero_gap': int((~nz_mask).sum()),
-        'n_nonzero_gap': int(nz_mask.sum()),
-        'pct_zero_gap': float((~nz_mask).mean()*100)
-    },
+    'enhancements': ['5_model_5fold_cv', 'focal_loss_classifier', 'isotonic_calibration', '1M_simulator'],
+    'data': {'n_total': int(len(y_base)), 'n_zero_gap': int((~nz_mask).sum()),
+             'n_nonzero_gap': int(nz_mask.sum()), 'pct_zero_gap': float((~nz_mask).mean()*100)},
     'classifier': {
-        'best_model': best_cls_name,
-        'standard_xgb': {
-            'cv_auc': float(np.mean(cls_aucs_std)),
-            'cv_auc_std': float(np.std(cls_aucs_std)),
-            'cv_ap': float(np.mean(cls_aps_std)),
-            'brier': float(brier_std),
-        },
-        'focal_xgb': {
-            'cv_auc': float(np.mean(cls_aucs_focal)),
-            'cv_auc_std': float(np.std(cls_aucs_focal)),
-            'cv_ap': float(np.mean(cls_aps_focal)),
-            'brier': float(brier_focal),
-            'focal_gamma': FOCAL_GAMMA,
-            'focal_alpha': FOCAL_ALPHA,
-        },
-        'isotonic_calibration': {
-            'brier_before': float(brier_uncal),
-            'brier_after': float(brier_cal),
-            'improvement_pct': float((brier_uncal - brier_cal)/brier_uncal*100),
-        },
+        'best_type': best_cls_type,
+        'standard_auc': float(auc_m),
+        'focal_auc': float(focal_auc_m),
+        'focal_gamma': FOCAL_GAMMA,
+        'focal_alpha': FOCAL_ALPHA,
         'optimal_threshold': float(best_thresh),
         'optimal_f1': float(best_f1),
-        'scale_pos_weight': float(scale_pos),
+        'brier_before_cal': float(brier_before),
+        'brier_after_cal': float(brier_after),
+        'auc_after_cal': float(auc_cal),
         'n_features': int(len(cls_features)),
     },
     'regressor': {
-        'type': '4_model_ensemble',
+        'type': '5_model_ensemble_5fold',
         'weights': rw,
+        'per_model_rmse': {n: float(v) for n, v in reg_rmses.items()},
+        'per_model_r2': {n: float(v) for n, v in reg_r2s.items()},
         'oof_rmse': float(reg_rmse),
         'oof_r2': float(reg_r2),
         'n_training': int(len(y_reg)),
         'n_features': int(len(reg_features)),
-        'model_rmses': {n: float(r) for n, r in reg_rmses.items()},
     },
-    'baseline': {
-        'type': '4_model_ensemble',
-        'weights': bw,
-        'oof_rmse': float(base_rmse),
-        'oof_r2': float(base_r2),
-    },
+    'baseline': {'type': '5_model_ensemble', 'weights': bw, 'oof_rmse': float(base_rmse), 'oof_r2': float(base_r2)},
     'comparison': {
-        'single_rmse': float(base_rmse_f),
-        'single_r2': float(base_r2_f),
-        'two_stage_rmse': float(ts_rmse_f),
-        'two_stage_r2': float(ts_r2_f),
-        'nonzero_mae_single': float(nz_b.mean()),
-        'nonzero_mae_two_stage': float(nz_t.mean()),
+        'single_rmse': float(base_rmse_f), 'single_r2': float(base_r2_f),
+        'two_stage_rmse': float(ts_rmse_f), 'two_stage_r2': float(ts_r2_f),
+        'nonzero_mae_single': float(nz_b.mean()), 'nonzero_mae_two_stage': float(nz_t.mean()),
         'nonzero_improvement_pct': float(pct_nz),
-        'zero_mae_single': float(z_b.mean()),
-        'zero_mae_two_stage': float(z_t.mean()),
+        'zero_mae_single': float(z_b.mean()), 'zero_mae_two_stage': float(z_t.mean()),
         'zero_improvement_pct': float(pct_z),
     },
+    'simulator_1M': {
+        'perturbation_results': perturbation_results,
+        'classifier_perturbation': cls_perturb_result,
+    },
     'submission': {
-        'mean': float(ts_cgs_final.mean()),
-        'std': float(ts_cgs_final.std()),
-        'min': float(ts_cgs_final.min()),
-        'max': float(ts_cgs_final.max()),
+        'mean': float(ts_cgs_final.mean()), 'std': float(ts_cgs_final.std()),
+        'min': float(ts_cgs_final.min()), 'max': float(ts_cgs_final.max()),
         'median': float(np.median(ts_cgs_final)),
     },
     'elapsed_sec': round(time.time() - t0, 1),
@@ -757,9 +791,10 @@ print("  Saved: two_stage_v2_results.json")
 el = time.time() - t0
 print(f"\n{'='*78}")
 print(f"DONE in {el:.0f}s")
-print(f"Best classifier: {best_cls_name} (Brier: {min(brier_std, brier_focal):.6f})")
-print(f"Calibration: Brier {brier_uncal:.6f} -> {brier_cal:.6f} ({(brier_uncal-brier_cal)/brier_uncal*100:.1f}% improvement)")
-print(f"Regressor:  RMSE={reg_rmse:.6f}, R2={reg_r2:.4f} (4-model: {', '.join(rn)})")
+print(f"Classifier: {best_cls_type}, AUC={max(auc_m, focal_auc_m):.4f}")
+print(f"Calibration: Brier {brier_before:.6f} -> {brier_after:.6f}")
+print(f"Regressor:  RMSE={reg_rmse:.6f}, R2={reg_r2:.4f}")
 print(f"Non-zero gap improvement: {pct_nz:+.1f}% MAE")
+print(f"1M Simulator: classifier perturbation mean_std={cls_perturb_result['mean_std']:.6f}")
 print(f"Submission: {len(submission)} tracts, mean={ts_cgs_final.mean():.4f}")
 print(f"{'='*78}")

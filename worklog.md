@@ -93,3 +93,73 @@ Work Log:
 
 Stage Summary:
 - No src/ bugs remaining — code is clean
+
+---
+Task ID: 6
+Agent: Main
+Task: Validation & Hardening Pipeline v3 (8 enhancements)
+
+Work Log:
+- Built enhancement_1_2_spatial_cv_error.py: Spatial CV + error analysis
+- Built enhancement_3_4_5_shap_ensemble_uncertainty.py: SHAP + stacked ensemble + prediction intervals
+- Built enhancement_6_7_8_audit_serialize_temporal.py: Classifier audit + serialization + temporal validation
+
+## Enhancement 1: Geographic/Spatial Cross-Validation
+- Random 3-fold baseline: RMSE=0.004017
+- County GroupKFold (5-fold): RMSE=0.004555 (+13.4%)
+- State GroupKFold (5-fold): RMSE=0.004418
+- Spatial Block KMeans (5-fold): RMSE=0.006510 (+62%)
+- Leave-One-State-Out: TX (state 48) drops hardest: RMSE=0.0178 R²=0.82
+- **Generalization gap: +13.4%** — moderate spatial overfitting detected
+
+## Enhancement 2: Error Analysis on Edge Cases
+- 13.1% of non-zero tracts have >10% sign flip rate at ε=0.10
+- High-flip tracts are MORE URBAN (0.698 vs 0.488) — counterintuitive
+- Worst predictions concentrated in TX (state 48), rural tracts
+- Tribal bias ratio: 1.209 (21% higher MAE on tribal tracts)
+- Error by urban quintile: rural bin MAE=0.0011, urban MAE=0.0004 (3x gap)
+
+## Enhancement 3: SHAP-Based Model Interpretation
+- Top 3 features by weighted SHAP: road_gap_clip (0.012), area_gap_clip (0.007), poi_gap_clip (0.002)
+- Model is DOMINATED by 2-3 gap features (road, area, poi)
+- Most divergent feature: rural_indicator (rank var=153 — ET ranks it #14, XGB/LGB rank it #40)
+- Wildfire features diverge significantly across models
+
+## Enhancement 4: Drop DART + Stacked Ensemble
+- DART removed (had 0% weight in v2)
+- 3-model weighted avg: RMSE=0.004105 R²=0.9809
+- Stacking Ridge: RMSE=0.004202 R²=0.9800 (slightly worse)
+- Stacking ElasticNet: RMSE=0.029676 (collapsed — bad for this data)
+- **Best ensemble: weighted_avg** (simple blending wins)
+
+## Enhancement 5: Prediction Intervals / Uncertainty
+- Quantile 90% PI: coverage=89.3%, mean width=0.009779
+- Conformal prediction: q_hat=0.001316, interval width=0.002632
+- Ensemble disagreement: mean_std=0.000540, **corr with error=0.493** (moderate uncertainty signal)
+
+## Enhancement 6: Classifier Threshold & Leakage Audit
+- **LEAKAGE DETECTED**: bldg_gap_clip alone achieves 96.8% classification accuracy
+- Feature overlap: 100% of regressor features are also in classifier features
+- AUC=1.0 is because classification is nearly trivially easy
+- Optimal F1 threshold=0.42, F2 threshold=0.17 (lower for recall)
+- EV-optimal with FN/FP cost=5: threshold=0.06
+
+## Enhancement 7: Production Serialization
+- Saved model artifacts to models/v3_20260814_173814/
+- Serialized: XGB (0.4MB), LGB (0.3MB), ET (2.6MB), classifier, isotonic calibrator
+- Built batched inference pipeline with schema validation
+- Inference test passed: 1000 predictions verified
+
+## Enhancement 8: Temporal Validation
+- No true temporal columns available (wildfire year columns are categorical, not time-series)
+- No population column found for proxy temporal validation
+- Temporal validation could not be performed — recommended for future data releases
+
+Stage Summary:
+- Spatial overfitting detected (+13.4% gap), especially on TX holdout
+- Classifier has near-trivial separability via bldg_gap_clip (96.8% accuracy alone)
+- Model dominated by road_gap_clip + area_gap_clip + poi_gap_clip (top 3 SHAP features)
+- Weighted averaging beats stacking for this ensemble
+- 90% prediction intervals achieve 89.3% coverage (well-calibrated)
+- Tribal bias ratio 1.209 (21% higher error) — persistent equity concern
+- Production artifacts serialized and tested
