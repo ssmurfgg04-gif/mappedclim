@@ -211,3 +211,57 @@ Stage Summary:
 - **3 features alone are INSUFFICIENT** (R2=0.23) — pct_urban is critical for zero-separation
 - **Tribal bias is 2x** (not 1.2x as estimated on non-zero subset) — 3x reweighting helps
 - **Disagreement rejection works** — 0.593 correlation with error, top 5% are 772% worse
+
+---
+Task ID: 8
+Agent: Main
+Task: P0 Verification — Is R²=0.9998 data leakage? (OLS on formula components)
+
+Work Log:
+- Traced target variable lineage: proxy_merged is a SELF-CONSTRUCTED proxy, not the real competition target
+- Found exact formula in pipeline_merged_phase1.py (lines 139-156)
+- Verified project already discovered formula: formula_decoder_1M.json (verified=True, RMSE=0.0)
+- Built ols_leakage_verification.py for formal proof
+
+## OLS Verification Results
+- **5-feature OLS: R² = 1.0000000000, RMSE = 0.0, max_error = 0.0**
+- Exact coefficients: bldg_gap_clip=-0.25, area_gap_clip=-0.50, road_gap_clip=-0.25, poi_gap_clip=-0.25, pct_urban=+1.0, intercept=-1.0
+- **pct_urban alone: R² = 0.9987** — target ≈ pct_urban - 1 for 85% of tracts
+- Gaps alone (no pct_urban): R² = 0.1646 — pct_urban is the dominant term
+- 85% of tracts (72,566/85,396) have all gaps < 0.001
+- Residuals are EXACTLY zero — no non-linear signal exists
+
+## Tribal Bias as Formula Property
+- Formula MAE is 0.0 on both tribal and non-tribal tracts (it's exact)
+- Tribal tracts have 7.14× higher road_gap_clip (systematic under-mapping)
+- Tribal tracts have lower pct_urban (0.44 vs 0.78) → more negative scores
+- The bias is in the DATA DISTRIBUTION, not the model
+- The formula treats all tracts identically — outcome differs because tribal tracts genuinely have worse coverage
+
+## Leakage Guard
+- 3 features with |correlation| > 0.95 with target: pct_urban, rural_continuous, rural_indicator
+- 28 derivative features of formula components
+- 206 safe (non-leakage) features identified
+
+## Real ML Opportunity
+- For KNOWN tracts: Apply formula directly (no ML needed)
+- For UNMAPPED tracts: Predict gaps from non-gap features
+  - road_gap: R²=0.21 from wildfire/climate features (best)
+  - poi_gap: R²=0.08 from drought/climate features
+  - bldg_gap: R²=0.04 from climate/CVI features (hard)
+  - area_gap: R²=0.05 from climate/CVI features (hard)
+- For REAL target (coverage_gap_score): Test if same formula applies first
+
+## Architecture Decision Record
+- ADR-001: RETIRE all ML models for proxy_merged prediction
+- Report the formula as the solution
+- All previous ML results (R², SHAP, ensemble, tribal bias, spatial CV) are CIRCULAR
+- The model is not "learning" — it is inverting a known formula
+
+Stage Summary:
+- **CONFIRMED: proxy_merged is an exact deterministic formula of training features**
+- **Formula: proxy_merged = -(bldg_gap_clip + 2·area_gap_clip + road_gap_clip + poi_gap_clip)/4 + pct_urban - 1**
+- **All ML results invalidated — this is formula inversion, not learning**
+- **Tribal bias is a data distribution effect, not a model artifact**
+- **Real ML value: predict coverage GAPS from non-gap features (SVI, CVI, hazards, climate)**
+- **When real target released: test if formula applies, then build ML only if needed**
