@@ -1,0 +1,171 @@
+{
+  "target": "road_gap_clip",
+  "n_features": 160,
+  "n_tracts": 85396,
+  "n_nontrivial": 3351,
+  "models": {
+    "XGB": {
+      "random_r2": 0.636822897392347,
+      "random_rmse": 0.02579128048609818,
+      "spatial_r2": 0.6400900248490609,
+      "spatial_rmse": 0.028083465934510582,
+      "gen_gap_pct": 8.887443373150548,
+      "tribal_mae": 0.01863150213417745,
+      "non_tribal_mae": 0.004421210590483466,
+      "tribal_ratio": 4.214117774503039,
+      "top_features": [
+        {
+          "feature": "mtbs_wildfire_burned_km2",
+          "importance": 0.14584247767925262
+        },
+        {
+          "feature": "ALAND",
+          "importance": 0.12425511330366135
+        },
+        {
+          "feature": "usfs_PopDen_mean",
+          "importance": 0.041565414518117905
+        },
+        {
+          "feature": "usfs_Exposure_mean",
+          "importance": 0.03497288003563881
+        },
+        {
+          "feature": "usfs_BuildingCover_mean",
+          "importance": 0.02428298071026802
+        },
+        {
+          "feature": "compound_risk",
+          "importance": 0.021758846938610077
+        },
+        {
+          "feature": "ruca_pop_density",
+          "importance": 0.02074603922665119
+        },
+        {
+          "feature": "carbonplan_crps_mean",
+          "importance": 0.01726800948381424
+        },
+        {
+          "feature": "fod_fires",
+          "importance": 0.016099294647574425
+        },
+        {
+          "feature": "usfs_BuildingDensity_mean",
+          "importance": 0.014633526094257832
+        },
+        {
+          "feature": "ruca_primary",
+          "importance": 0.014575344510376453
+        },
+        {
+          "feature": "svi_pop",
+          "importance": 0.014157199300825596
+        },
+        {
+          "feature": "ruca_secondary",
+          "importance": 0.013866345398128033
+        },
+        {
+          "feature": "hwd_maxtemp_change",
+          "importance": 0.013477053493261337
+        },
+        {
+          "feature": "tiger_road",
+          "importance": 0.012391493655741215
+        }
+      ],
+      "n_features": 160
+    },
+    "LGB": {
+      "random_r2": 0.8035688317276968,
+      "random_rmse": 0.01896788354411021,
+      "spatial_r2": 0.7896519919798535,
+      "spatial_rmse": 0.02146955117150971,
+      "gen_gap_pct": 13.188965556340637,
+      "tribal_mae": 0.009637480685150074,
+      "non_tribal_mae": 0.0023544112031795104,
+      "tribal_ratio": 4.093371910622561,
+      "top_features": [
+        {
+          "feature": "compound_risk",
+          "importance": 360.0
+        },
+        {
+          "feature": "ov_road",
+          "importance": 181.0
+        },
+        {
+          "feature": "usfs_Exposure_mean",
+          "importance": 167.0
+        },
+        {
+          "feature": "tiger_road",
+          "importance": 142.0
+        },
+        {
+          "feature": "usfs_BuildingCover_mean",
+          "importance": 137.0
+        },
+        {
+          "feature": "usfs_BuildingDensity_mean",
+          "importance": 127.0
+        },
+        {
+          "feature": "cvi_x_bldg",
+          "importance": 120.0
+        },
+        {
+          "feature": "ALAND",
+          "importance": 116.0
+        },
+        {
+          "feature": "cvi_climate_extreme_events",
+          "importance": 106.0
+        },
+        {
+          "feature": "cvi_climate_socioeconomic",
+          "importance": 105.0
+        },
+        {
+          "feature": "cvi_baseline_environment",
+          "importance": 102.0
+        },
+        {
+          "feature": "INTPTLAT",
+          "importance": 96.0
+        },
+        {
+          "feature": "usfs_PopDen_mean",
+          "importance": 94.0
+        },
+        {
+          "feature": "usdm_summer_dsci",
+          "importance": 90.0
+        },
+        {
+          "feature": "ruca_pop_density",
+          "importance": 87.0
+        }
+      ],
+      "n_features": 160,
+      "state_loo_r2": 0.6750285865817061,
+      "state_loo_per_state": {
+        "06": 0.7121435945497265,
+        "48": 0.5908289272042567,
+        "36": 0.722113237991135
+      }
+    },
+    "ENSEMBLE": {
+      "spatial_r2": 0.7309900906768668,
+      "spatial_rmse": 0.024279397347947134,
+      "note": "Avg XGB+LGB on county holdout"
+    }
+  },
+  "best_model": "LGB",
+  "improvement_vs_baseline": {
+    "baseline": 0.6351,
+    "new": 0.7896519919798535,
+    "delta": 0.15455199197985348
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "target": "road_gap_clip",
+  "n_features": 160,
+  "n_tribal": 2053,
+  "n_non_tribal": 83343,
+  "models": {
+    "baseline": {
+      "spatial_r2": 0.7896519919798535,
+      "spatial_rmse": 0.02146955117150971,
+      "n_tribal_test": 244,
+      "tribal_mae": 0.0313748625488042,
+      "non_tribal_mae": 0.0036941530110552612,
+      "tribal_ratio": 8.493113970891462,
+      "tribal_max_error": 0.3710851352122801,
+      "tribal_p95_error": 0.13442415476929692
+    },
+    "reweight_3x": {
+      "spatial_r2": 0.7780367423737121,
+      "spatial_rmse": 0.022054352344961246,
+      "tribal_mae": 0.031964982759652566,
+      "non_tribal_mae": 0.0037647000839139437,
+      "tribal_ratio": 8.490711623014707,
+      "weight": 3
+    },
+    "reweight_5x": {
+      "spatial_r2": 0.774800182395447,
+      "spatial_rmse": 0.022214563334301825,
+      "tribal_mae": 0.03377306688521434,
+      "non_tribal_mae": 0.0038163178195100653,
+      "tribal_ratio": 8.84964735184191,
+      "weight": 5
+    },
+    "reweight_8x": {
+      "spatial_r2": 0.7794282768459334,
+      "spatial_rmse": 0.021985111960735684,
+      "tribal_mae": 0.033711333215985115,
+      "non_tribal_mae": 0.0039051935272669,
+      "tribal_ratio": 8.632436006206952,
+      "weight": 8
+    },
+    "reweight_16x": {
+      "spatial_r2": 0.7602453245961246,
+      "spatial_rmse": 0.022921197651767717,
+      "tribal_mae": 0.033396842253895095,
+      "non_tribal_mae": 0.003968780093649428,
+      "tribal_ratio": 8.414888571764015,
+      "weight": 16
+    },
+    "aug_baseline": {
+      "spatial_r2": 0.7941760936831583,
+      "spatial_rmse": 0.021237415887772445,
+      "tribal_mae": 0.03034944630107037,
+      "non_tribal_mae": 0.0036461479249741114,
+      "tribal_ratio": 8.323701321384501
+    },
+    "aug_reweight_5x": {
+      "spatial_r2": 0.7802623607746892,
+      "spatial_rmse": 0.021943504639702287,
+      "tribal_mae": 0.032754767014584775,
+      "non_tribal_mae": 0.003694026724664003,
+      "tribal_ratio": 8.866954533893917
+    }
+  },
+  "best_tribal_ratio_variant": "aug_baseline",
+  "best_r2_variant": "aug_baseline"
+}
