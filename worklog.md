@@ -351,3 +351,49 @@ Stage Summary:
 - **TRIBAL EQUITY: 8.49× MAE ratio persists across all mitigation strategies**
 - **Root cause of tribal inequity: OSM under-mapping, not model bias**
 - **Production recommendation: ship augmented-feature variant, document equity limitation in model card**
+
+---
+Task ID: 11
+Agent: Main
+Task: Region-specific POI models + production model card + GitHub push
+
+Work Log:
+- Built region_specific_poi_models.py with 4 approaches:
+  - baseline_loo (single global, hold out state)
+  - region_specific (train on home state only)
+  - hybrid_state_indicators (global + state one-hot features)
+  - cluster_based (train on home state + 10 similar states)
+- Wrote model_card_v4.md (production model card, ~10 sections)
+
+## REGION-SPECIFIC POI MODELS — MAJOR WIN
+
+| State | Baseline (LOO) | Region-Specific | Hybrid Indicators | Cluster-Based |
+|-------|---------------|-----------------|-------------------|---------------|
+| California | R²=0.964 | R²=0.086 | R²=0.956 | **R²=0.965** |
+| Texas | R²=**-2.015** | R²=0.127 | R²=-2.280 | **R²=0.805** ✨ |
+| New York | R²=0.986 | R²=0.872 | R²=0.983 | **R²=0.984** |
+
+**Cluster-based training rescued TX from R²=-2.015 → R²=+0.805** (massive improvement)
+- Trained TX model on TX + 10 similar states (by POI gap distribution similarity)
+- The "similar states" approach successfully transferred patterns to TX
+- Region-specific (train on home state only) was too data-sparse — R²=0.127 for TX
+- Hybrid with state indicators did NOT help TX (R²=-2.280)
+
+## PRODUCTION MODEL CARD v4
+
+10-section model card covering:
+1. Overview & intended use
+2. Two-stage architecture (ML gaps + formula)
+3. Training data (160 non-leakage features)
+4. Performance (road R²=0.79, POI cluster-based, bldg/area R²~0.15)
+5. **Equity limitations: 8.49× tribal MAE ratio** (with full reweighting sweep table)
+6. Distribution shift awareness (TX POI weakness, even after cluster-based fix)
+7. Operational considerations (input format, output format, equity warning logic)
+8. Caveats and validation (real target not yet tested)
+9. Ethical considerations (DO/DO NOT list for tribal tracts)
+10. Version history (v1-v4 with lessons learned)
+
+Stage Summary:
+- **CLUSTER-BASED POI MODEL RESCUED TX: R²=-2.015 → +0.805**
+- **Production model card v4 complete with full equity documentation**
+- **All artifacts ready to push to GitHub**

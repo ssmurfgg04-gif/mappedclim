@@ -1,0 +1,113 @@
+{
+  "target": "road_gap_clip",
+  "n_features": 31,
+  "n_tracts": 85396,
+  "n_nontrivial": 3351,
+  "models": {
+    "XGB": {
+      "random_r2": 0.6748071868386255,
+      "random_rmse": 0.02453801226104871,
+      "spatial_r2": 0.6551532653604257,
+      "spatial_rmse": 0.0251569243015968,
+      "gen_gap_pct": 2.5222582577747916,
+      "top_features": [
+        {
+          "feature": "fod_natural_fires",
+          "importance": 0.12757517397403717
+        },
+        {
+          "feature": "usfs_BuildingCover_mean",
+          "importance": 0.10363195091485977
+        },
+        {
+          "feature": "source_diversity_entropy",
+          "importance": 0.08986064046621323
+        },
+        {
+          "feature": "mtbs_wildfire_fires",
+          "importance": 0.08873237669467926
+        },
+        {
+          "feature": "compound_risk",
+          "importance": 0.06681685894727707
+        },
+        {
+          "feature": "usfs_Exposure_mean",
+          "importance": 0.06448904424905777
+        },
+        {
+          "feature": "source_coverage_fraction",
+          "importance": 0.03815793618559837
+        },
+        {
+          "feature": "fod_large_fires",
+          "importance": 0.03763454779982567
+        },
+        {
+          "feature": "usfs_WHP_mean",
+          "importance": 0.03165043890476227
+        },
+        {
+          "feature": "usfs_CRPS_mean",
+          "importance": 0.029449356719851494
+        }
+      ],
+      "tribal_mae": 0.0130327330651233,
+      "non_tribal_mae": 0.003744574000542208,
+      "tribal_ratio": 3.4804314357884722
+    },
+    "LGB": {
+      "random_r2": 0.6796505908984278,
+      "random_rmse": 0.02436116868910807,
+      "spatial_r2": 0.6578411545054562,
+      "spatial_rmse": 0.02505384802563134,
+      "gen_gap_pct": 2.8433748206545095,
+      "top_features": [
+        {
+          "feature": "compound_risk",
+          "importance": 406.0
+        },
+        {
+          "feature": "usfs_BuildingCover_mean",
+          "importance": 386.0
+        },
+        {
+          "feature": "usfs_Exposure_mean",
+          "importance": 293.0
+        },
+        {
+          "feature": "cvi_climate_health",
+          "importance": 228.0
+        },
+        {
+          "feature": "fod_natural_fires",
+          "importance": 213.0
+        },
+        {
+          "feature": "usdm_summer_dsci",
+          "importance": 212.0
+        },
+        {
+          "feature": "cvi_climate",
+          "importance": 210.0
+        },
+        {
+          "feature": "pop_total",
+          "importance": 202.0
+        },
+        {
+          "feature": "usdm_summer_pct_d0plus",
+          "importance": 194.0
+        },
+        {
+          "feature": "cvi_baseline_infrastructure",
+          "importance": 187.0
+        }
+      ],
+      "tribal_mae": 0.014601049365298227,
+      "non_tribal_mae": 0.003915694317270656,
+      "tribal_ratio": 3.7288532204616907
+    }
+  },
+  "best_model": "LGB"
+}

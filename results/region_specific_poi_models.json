@@ -1,0 +1,135 @@
+{
+  "target": "poi_gap_clip",
+  "n_features": 149,
+  "focus_states": [
+    "06",
+    "48",
+    "36"
+  ],
+  "state_names": {
+    "06": "California",
+    "48": "Texas",
+    "36": "New York"
+  },
+  "approaches": {
+    "baseline_loo_06": {
+      "r2": 0.9643895344480617,
+      "rmse": 0.00019427512853897785,
+      "mae": 4.463467017823962e-05,
+      "mae_on_nontrivial": 0.0012219073671210702
+    },
+    "baseline_loo_48": {
+      "r2": -2.01532899561556,
+      "rmse": 0.002162643101014839,
+      "mae": 0.0006783538828037836,
+      "mae_on_nontrivial": 0.0021786594129903996
+    },
+    "baseline_loo_36": {
+      "r2": 0.9859036030063197,
+      "rmse": 0.0003576569471107368,
+      "mae": 6.610567316509657e-05,
+      "mae_on_nontrivial": 0.0007202509801346016
+    },
+    "region_specific_06": {
+      "r2": 0.08606097791368739,
+      "rmse": 0.001840359213898347,
+      "mae": 0.00027769535921766576,
+      "mae_on_nontrivial": 0.0094890830680834,
+      "n_train": 8192,
+      "n_test": 937,
+      "n_nontrivial_test": 20
+    },
+    "region_specific_48": {
+      "r2": 0.1273233594661387,
+      "rmse": 0.0012719585493692557,
+      "mae": 0.0001987973031417031,
+      "mae_on_nontrivial": 0.006452057831271171,
+      "n_train": 6080,
+      "n_test": 816,
+      "n_nontrivial_test": 17
+    },
+    "region_specific_36": {
+      "r2": 0.8723327679141658,
+      "rmse": 0.000661535170575804,
+      "mae": 0.00011297081687091088,
+      "mae_on_nontrivial": 0.005170600013534645,
+      "n_train": 4589,
+      "n_test": 822,
+      "n_nontrivial_test": 6
+    },
+    "hybrid_state_indicators_06": {
+      "r2": 0.9556133104730945,
+      "rmse": 0.00021689760522279765,
+      "mae": 5.4239006538152405e-05,
+      "mae_on_nontrivial": 0.0014647680037507729
+    },
+    "hybrid_state_indicators_48": {
+      "r2": -2.2797396200559152,
+      "rmse": 0.002255470677087231,
+      "mae": 0.0007010385213776992,
+      "mae_on_nontrivial": 0.002071188785131919
+    },
+    "hybrid_state_indicators_36": {
+      "r2": 0.9832377425379673,
+      "rmse": 0.0003900127973178619,
+      "mae": 9.356190703839606e-05,
+      "mae_on_nontrivial": 0.0009452093769125789
+    },
+    "cluster_based_06": {
+      "r2": 0.9651617462014073,
+      "rmse": 0.0001921571587527001,
+      "mae": 3.1620579569679885e-05,
+      "mae_on_nontrivial": 0.0015095412272463958,
+      "n_train": 42566,
+      "similar_states_used": [
+        "48",
+        "36",
+        "12",
+        "26",
+        "13"
+      ]
+    },
+    "cluster_based_48": {
+      "r2": 0.8047705947680496,
+      "rmse": 0.0005502880955540009,
+      "mae": 9.558347874320079e-05,
+      "mae_on_nontrivial": 0.002068909879044657,
+      "n_train": 42566,
+      "similar_states_used": [
+        "36",
+        "06",
+        "12",
+        "26",
+        "13"
+      ]
+    },
+    "cluster_based_36": {
+      "r2": 0.983778624169884,
+      "rmse": 0.0003836687678357745,
+      "mae": 9.185149275091196e-05,
+      "mae_on_nontrivial": 0.0008869472799080574,
+      "n_train": 39708,
+      "similar_states_used": [
+        "12",
+        "48",
+        "26",
+        "42",
+        "13"
+      ]
+    }
+  },
+  "summary": {
+    "06": {
+      "baseline_loo_r2": 0.9643895344480617,
+      "best_approach": "cluster_based"
+    },
+    "48": {
+      "baseline_loo_r2": -2.01532899561556,
+      "best_approach": "cluster_based"
+    },
+    "36": {
+      "baseline_loo_r2": 0.9859036030063197,
+      "best_approach": "baseline_loo"
+    }
+  }
+}
