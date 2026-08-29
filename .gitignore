@@ -1,39 +1,29 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Data files (too large for git)
-data/raw/
-data/processed/
-data/features/
-data/output/
-
-# Jupyter
+*.egg-info/
 .ipynb_checkpoints/
+
+# Large raw data (download via pipeline/00_download_data.sh — ~5 GB)
+data/roads/
+data/buildings/
+data/tracts/
+data/tmp/
+data/cache/
 
 # Environment
 .env
 .venv/
-env/
+.env
 
-# IDE
+# IDE / OS
 .vscode/
 .idea/
 *.swp
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs / temp
 *.log
-pipeline.log
-
-# Models (large)
-*.pkl
-*.joblib
-*.bin
-.tmp/
-data/
 *.tmp
+.tmp/

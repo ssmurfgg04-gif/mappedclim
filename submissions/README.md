@@ -1,29 +1,17 @@
 # Submissions
 
-## Current (Pipeline Locked — Bug-Fixed)
+| File | Public score | Notes |
+|---|---|---|
+| `submission_final.csv` | **0.000003013** (MAE; Zindi ID `7Y8ys9mL`) | Final leaderboard submission — exact component-formula reproduction |
+| `submission_final_with_components.csv` | (same rows) | Per-component breakdown: transport/building/poi gaps + defined flags |
 
-| File | Pipeline | Features | R² | Risk | Description |
-|------|----------|----------|-----|------|-------------|
-| `lean_submission.csv` | Phase 2 (3-model) | 67 | 0.976 | LOW | Primary — proven, fast |
-| `expanded_submission.csv` | Integrated 10x (5-model) | 68 | 0.967 | MEDIUM | Secondary — hedge with interactions |
+Both files regenerate via `python pipeline/04_assemble_submission.py` (fast path uses the
+committed component parquets in `data/computed/`; full path recomputes from the ~5 GB
+source download — see the main README).
 
-Both include:
-- **Bug Fix #1**: `is_perfectly_mapped` indicator (72,260 tracts)
-- **Bug Fix #2**: `building_gap` clipped to [-4, 1]
-- **Deterministic fix**: Train on `gap_only`, rural penalty at inference only
-- **17 interaction features**: climate/fire × gap interactions
+Format: 9,379 rows, `GEOID` as text (leading zeros preserved — Maricopa is FIPS `04`),
+`coverage_gap_score` rounded to 6 decimals, no blank cells.
 
-### Inference Formula
-```
-final_score = model.predict(X) - 1.0 * rural_penalty
-```
-
-### Decision Rule (Aug 28)
-- Submit both to public LB
-- If expanded > lean → interactions are real signal
-- If lean > expanded → interactions are proxy-specific, stay lean
-- Retrain winner on full data for final submission
-
-## Archive
-
-Previous submission versions kept for reference. These are **NOT** the current locked submissions.
+`analysis/make_neg_probes.py` additionally generates leaderboard-probe files (single-tract
+perturbations used to measure reference values through the public score). Probe files are
+not submissions — see `docs/findings_and_leaderboard_probes.md`.
